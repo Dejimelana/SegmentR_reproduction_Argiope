@@ -1,0 +1,18 @@
+# Run artefacts: masks, QA plots, CSVs, reports. Regenerable from the script + run_config.json.
+outputs/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# --- Model weights / HF cache ---
+*.pt
+*.pth
+*.safetensors
+
+# --- OS ---
+.DS_Store
+Thumbs.db
