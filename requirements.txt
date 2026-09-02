@@ -1,0 +1,16 @@
+# Probe-only dependencies for the SegmentR reproduction.
+#
+# Deliberately NOT added to the parent project's pyproject.toml: this is a throwaway
+# replication and it must not change Argiope's dependency contract.
+#
+# Everything else the script needs (torch, opencv-python, scikit-learn, scikit-image,
+# matplotlib, pandas, numpy, pillow) is already present in the `argiope` conda env.
+#
+# Install with:  pip install -r repro/segmentr/requirements.txt
+#
+# transformers is pinned to the 4.x line because the upstream SegmentR code (2024-2025)
+# was written against it: `pipeline(task="zero-shot-object-detection")`,
+# `AutoModelForMaskGeneration` and `processor.post_process_masks(...)` are the 4.x APIs.
+transformers>=4.44,<5
+timm>=1.0
+accelerate>=0.30
