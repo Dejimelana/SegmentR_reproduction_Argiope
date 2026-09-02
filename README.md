@@ -44,8 +44,21 @@ The probe therefore expects to be run from the Argiope project root, or pointed 
 
 ## Status
 
-`PROMPT.md` is written; the script is not implemented yet. To build it, execute `PROMPT.md` in
-a Claude Code session started from the Argiope project root.
+**Complete.** `repro_segmentr.py` ports the method end to end and has been run on 40 seeded,
+species-stratified GBIF photographs at the paper's score threshold of 0.5 and again at 0.3.
+`pytest repro/segmentr` covers the pure functions (50 tests: no weights, no GPU, no network).
+
+**Finding, in one line:** the method as published does not recover the opisthosoma from our
+images. All three text prompts return the same whole-animal mask (median abdomen-to-whole
+area ratio 1.000), so part subtraction deletes a median 99.91% of the region it is meant to
+refine, and what survives is background — foliage, silk, a wall, a hand. One image in 40
+produced a mask I would accept as an abdomen, and only because part subtraction failed to
+run on it.
+
+Read `REPORT.md` for the counts, per-prompt hit rates, failure modes, the full DEVIATIONS
+list and the recommendation about what earns promotion into `src/argiope/`. The same report
+is written into each run directory. Run artefacts live in `outputs/<run_id>/` and are
+git-ignored; `run_config.json` reproduces a run on its own.
 
 ## Attribution and licence
 

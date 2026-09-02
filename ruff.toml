@@ -1,0 +1,17 @@
+# Lint settings for the reproduction probe.
+#
+# This is a REPLICATION: functions marked `# --- ported from <upstream file> ---` mirror
+# SegmentR's source text as closely as Python allows, so the pyupgrade family (UP) is
+# switched off here. Upstream writes `from typing import List, Dict, Optional` and
+# annotates `Optional[np.array]` / `List[DetectionResult]`; rewriting those to PEP 585/604
+# spellings would make the port harder to diff against the original for no behavioural
+# gain. The parent Argiope project selects UP and is unaffected -- it does not lint this
+# directory (`repro/` is git-ignored there, and this repository is separate).
+#
+# B905 (zip without strict=) is likewise left enabled but unfixed at the two call sites
+# inherited from upstream, where zip's truncating behaviour is the original's semantics.
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "B"]

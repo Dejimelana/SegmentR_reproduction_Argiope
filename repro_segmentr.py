@@ -1274,7 +1274,8 @@ def run_from_json(
     out_csv = run_dir / "colors_from_json.csv"
     write_csv(out_csv, rows, COLORS_CSV_FIELDS)
     loaded = "transformers" in sys.modules
-    log("\nre-analysed {} images, {} skipped -> {}".format(len(entries) - len(skipped), len(skipped), out_csv))
+    log("\nre-analysed {} images, {} skipped -> {}".format(
+        len(entries) - len(skipped), len(skipped), out_csv))
     log("transformers imported during this run: {}".format(loaded))
     assert not loaded, "--from-json must not load a model"
     return {"rows": len(rows), "skipped": len(skipped), "models_loaded": loaded}
