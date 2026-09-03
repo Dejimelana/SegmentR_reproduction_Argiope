@@ -41,6 +41,8 @@ The probe therefore expects to be run from the Argiope project root, or pointed 
 ├── repro_segmentr.py            the ported pipeline — the reproduction proper, unchanged
 ├── adapt_unet.py                the adapter: Argiope's trained U-Net -> stages E/F/G
 ├── R/argiope.R                  thin R interface over the `argiope describe` contract
+├── docs/GALERIA.md              the gallery, rendered by GitHub: masks, cut-outs, palettes
+├── docs/galeria.html            the interactive version of the same run
 ├── experiments/                 follow-up work that is NOT part of the reproduction
 │   ├── candidate_selection.py   measured the mechanism claim in REPORT §3.1
 │   └── sanity_gt_vs_unet.py     does a U-Net mask give the same colours as a hand mask?
@@ -102,6 +104,14 @@ options(argiope.executable = ".../envs/argiope/Scripts/argiope.exe")
 d <- argiope_describe("spider.jpg")
 argiope_palette(d)          # hex, name, coverage, ci_low, ci_high, delta_e
 ```
+
+**The gallery.** `docs/GALERIA.md` shows what the adapted pipeline actually produces on 100
+GBIF photographs that were never annotated for training: for each one, the photograph with the
+mask outlined, the isolated opisthosoma, and the palette stage E extracted. 73 of the 100 yield
+a mask; the 27 that yield nothing are listed too. Every photograph carries its photographer,
+licence and GBIF link — see `THIRD_PARTY_NOTICES.md`. `docs/galeria.html` is the interactive
+version (GitHub shows HTML source rather than rendering it, so download it or serve it through
+GitHub Pages).
 
 **Does the segmenter's error move the colours?** `experiments/sanity_gt_vs_unet.py` compares,
 over the held-out split, the palette taken from the hand-drawn mask against the palette taken

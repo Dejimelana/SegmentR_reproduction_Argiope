@@ -61,5 +61,24 @@ Downloaded at runtime from the HuggingFace Hub; neither is redistributed here.
 ## Images
 
 Input photographs under `data/raw/gbif/` belong to the parent Argiope project and are read
-**read-only**. None are redistributed in this repository; run artefacts derived from them are
+**read-only**. Run artefacts (masks, QA figures, cut-outs) live in `outputs/` and are
 git-ignored.
+
+**One exception, added deliberately:** `docs/GALERIA.md` and `docs/img/` reproduce
+**downscaled thumbnails** of the 73 photographs for which the pipeline produced a mask, so the
+gallery is viewable in the repository. These are third-party photographs obtained via GBIF
+(largely iNaturalist observations) and are reproduced **with per-image attribution** — the
+photographer, the licence and a link to the GBIF occurrence appear beside every image in
+`docs/GALERIA.md`. Licences of the published thumbnails:
+
+| Licence | Images |
+| --- | ---: |
+| [CC-BY-NC](https://creativecommons.org/licenses/by-nc/4.0/) | 65 |
+| [CC-BY](https://creativecommons.org/licenses/by/4.0/) | 6 |
+| [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | 2 |
+
+All three permit redistribution with attribution; **CC-BY-NC forbids commercial use**, which
+therefore constrains that part of this repository regardless of the MIT licence covering the
+code. Full-resolution originals are not redistributed — follow the GBIF link for the source
+image. The derived masks and palettes are outputs of this analysis; the photographs remain
+their authors'. If any rights holder objects, the thumbnail will be removed on request.
