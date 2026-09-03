@@ -22,7 +22,8 @@ of the region it was supposed to refine, and the pixels left behind were backgro
 foliage, silk, a wall, and in one case the photographer's hand.
 
 This is a negative result about *this method on these images*, not about text-prompted
-segmentation in general. The limits of that claim are in **Skeptic's note** below.
+segmentation in general. The limits of that claim are in **Skeptic's note** below, and
+**§9 is an addendum that corrects §3.1's explanation** after measuring it.
 
 ---
 
@@ -90,6 +91,12 @@ Averaging over the candidate axis and thresholding at `> 0` is a **union**. The 
 job is to choose among "abdomen / abdomen+cephalothorax / whole animal" instead returns
 all three. The part prompt cannot express a part. This is reproduced verbatim and pinned by
 `test_refine_masks_takes_the_union_of_slimsams_three_candidates`.
+
+> **Corrected by §9.** The measurements above stand, but the causal claim in this
+> paragraph does not. A follow-up experiment replaced the union with a selection of
+> SlimSAM's top-ranked candidate and the granularity ratio moved from 1.000 to 0.999.
+> The union is a real but second-order defect; the part is already lost at the
+> detector. See the addendum.
 
 At 0.3 the ratio's median rises to 1.144 (max 2.112): more boxes clear the filter, the
 union grows, and the "abdomen" mask becomes *larger* than the whole-animal mask.
@@ -185,8 +192,11 @@ this pipeline**, and reporting only the former would have inverted the conclusio
 
 Each of these is in the port exactly as upstream has it; the objection lives here.
 
-1. **`refine_masks` takes the union of SlimSAM's three candidates** (§3.1). This alone
-   defeats part-prompted segmentation.
+1. **`refine_masks` takes the union of SlimSAM's three candidates** (§3.1), discarding
+   the `iou_scores` the model returns to rank them. On 11 of 98 boxes this inflates the
+   mask by more than 10%. *(An earlier draft called this sufficient on its own to defeat
+   part-prompted segmentation; §9 measured that and it is not — the part is already lost
+   at the detector.)*
 2. **Colour means are taken in RGB while clustering is perceptual** (§3.6).
 3. **`kmeans()` is unseeded** (`R/image_analysis.R`: Hartigan-Wong, `nstart = 1`, no seed),
    so the paper's own colour output is not reproducible run to run. Deviation D2.
@@ -319,3 +329,94 @@ pytest repro/segmentr        # 50 pure-function tests: no weights, no GPU, no ne
 
 Every parameter, seed, package version and the resolved image list are in
 `run_config.json`; the run is reproducible from that file alone.
+
+---
+
+## 9. Addendum — a follow-up experiment that corrects §3.1
+
+**Status: this is not part of the reproduction.** `repro_segmentr.py`, the two runs and
+everything in §§1–8 are unchanged. This section records a follow-up experiment
+(`experiments/candidate_selection.py`) run afterwards, because it showed that §3.1
+attributed the failure to the wrong cause. The measurements in §3.1 stand; the
+*explanation* was overstated, and correcting it is the point of this addendum.
+
+### The question
+
+§3.1 blamed `refine_masks` for taking the union of SlimSAM's three candidate masks, and
+objection 1 called that defect sufficient on its own — "this alone defeats part-prompted
+segmentation". That was an inference from reading the code, never a measurement. SlimSAM
+returns `iou_scores` alongside `pred_masks` — the model's own ranking of its three
+candidates — and `refine_masks` discards it. So: does *selecting* the top-ranked candidate,
+instead of unioning all three, recover the abdomen?
+
+### Design
+
+A controlled comparison with one variable. Boxes were read back from the finished run's
+JSON artefacts, so GroundingDINO was never re-run and both arms saw byte-identical boxes,
+labels and scores; a single SlimSAM forward pass per image fed both arms. The only
+difference was how `(n_boxes, 3, H, W)` collapses to `(n_boxes, H, W)`:
+
+```
+union   = (mask.float().mean(0) > 0)     # upstream refine_masks
+argmax  = mask[argmax(iou_scores)]       # the variant under test
+```
+
+31 images, 98 boxes. The control arm reproduced the original run's areas to within a few
+pixels (258 460 vs 258 458 px on the first image), confirming the comparison is sound.
+
+### Result: selection does not recover the abdomen
+
+| | union (upstream) | argmax `iou_scores` |
+|---|---|---|
+| granularity, median abdomen ÷ whole-animal area | **1.000** | **0.999** |
+| within ±5% of parity | 27/29 | 27/29 |
+| median retention after subtraction | 0.00110 | **0.00086** |
+| final ROI < 1000 px | 24/31 | 25/31 |
+
+Selecting is, if anything, marginally *worse*. The reason is in the per-box numbers: the
+three candidates genuinely do differ — median area ratio max/min **1.63**, upper quartile
+2.22, only 2 of 98 boxes near-identical — but **the candidate SlimSAM ranks highest is
+almost always the largest one**. Median selected-area ÷ union-area is **0.9936**; only 11
+of 98 boxes shrink by more than 10%, and candidate 0 wins 83 times out of 98. Removing the
+union changes the granularity ratio from 1.000 to 0.999.
+
+### The actual cause: the detector never localises the part
+
+With the union eliminated as the explanation, the next stage up was measured. Comparing,
+per image, the highest-scoring `"the abdomen of a spider."` box against the highest-scoring
+`"a spider."` box (n = 29):
+
+```
+abdomen-box area / whole-animal-box area:
+  min 0.09   q25 0.98   median 0.99   q75 1.00   max 1.03
+  abdomen box >= 80% of the whole-animal box:  28 / 29
+  abdomen box LARGER than the whole-animal box: 7 / 29
+  median fraction of the abdomen box inside the animal box: 0.998
+```
+
+**GroundingDINO returns the whole-animal box for the part prompt.** SAM, prompted with a
+whole-animal box, proposes whole-animal masks and ranks the largest best. The union in
+`refine_masks` then adds almost nothing on top of a mask that was already wrong.
+
+The structural reason is that **SlimSAM is not text-conditioned at all**:
+`SamModel.forward` accepts `pixel_values`, `input_points`, `input_labels`, `input_boxes`
+and `input_masks` — there is no text input. In a GroundedSAM pipeline the prompt enters at
+exactly one place, the detector. If the part concept does not survive GroundingDINO, it is
+gone before the segmenter starts, and no amount of post-processing downstream can restore
+it.
+
+### What this changes
+
+- §3.1's measurements are unaffected: all three prompts really do return the same mask,
+  median ratio 1.000.
+- §3.1's and objection 1's *causal* claim is corrected. The union is a real defect — it
+  discards a ranking the model computed, and on 11 of 98 boxes it inflates the mask by more
+  than 10% — but it is **second-order**. Calling it sufficient on its own was wrong.
+- The recommendation in §7 is unaffected in substance and sharper in reasoning: repairing
+  `refine_masks` buys roughly 0.6% of mask area and would not make this pipeline usable for
+  opisthosoma segmentation. Part localisation has to come from a stage that is actually
+  conditioned on the part — a text-conditioned segmenter, or a box that already isolates
+  the part — not from tuning the collapse rule.
+- The skeptic's note in §6 anticipated this class of outcome and it duly happened. The
+  mechanism was read off the source before it was measured, and measuring it changed the
+  answer. Worth remembering the next time a code-reading feels conclusive.
