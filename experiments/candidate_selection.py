@@ -28,7 +28,6 @@ number is an area the models themselves produced.
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import sys
 from pathlib import Path
@@ -122,7 +121,7 @@ def run(run_dir: Path, out_dir: Path, score_threshold: float, limit: int | None)
             for store, m in ((by_label_u, u), (by_label_a, a)):
                 store[lab] = store[lab] | m if lab in store else m.copy()
 
-        def summarise(store, arm):
+        def summarise(store, arm, name=name, species=species, W=W, H=H):
             roi = store.get(roi_label)
             if roi is None:
                 return None
@@ -143,12 +142,17 @@ def run(run_dir: Path, out_dir: Path, score_threshold: float, limit: int | None)
             row = summarise(store, arm)
             if row:
                 per_image.append(row)
-        u_row = per_image[-2] if len(per_image) >= 2 and per_image[-1]["arm"] == "argmax_iou" else None
+        u_row = None
+        if len(per_image) >= 2 and per_image[-1]["arm"] == "argmax_iou":
+            u_row = per_image[-2]
         if u_row:
-            rs.log(f"  union  roi={u_row['roi_px']:>8} px  final={u_row['final_px']:>7} px   "
-                   f"argmax roi={per_image[-1]['roi_px']:>8} px  final={per_image[-1]['final_px']:>7} px")
+            arg = per_image[-1]
+            rs.log(f"  union  roi={u_row['roi_px']:>8} px  "
+                   f"final={u_row['final_px']:>7} px   "
+                   f"argmax roi={arg['roi_px']:>8} px  final={arg['final_px']:>7} px")
 
-    rs.write_csv(out_dir / "per_box.csv", per_box, list(per_box[0].keys()) if per_box else ["image"])
+    rs.write_csv(out_dir / "per_box.csv", per_box,
+                 list(per_box[0].keys()) if per_box else ["image"])
     rs.write_csv(out_dir / "per_image.csv", per_image,
                  list(per_image[0].keys()) if per_image else ["image"])
     (out_dir / "experiment_config.json").write_text(json.dumps({

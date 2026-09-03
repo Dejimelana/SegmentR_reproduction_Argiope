@@ -41,9 +41,23 @@ def _det(score, label, mask=None, box=(0, 0, 1, 1)):
 # ---------------------------------------------------------------- isolation guarantees
 
 def test_module_does_not_import_argiope_or_a_model():
-    """The hard rule: the probe must not lean on the pipeline it will be compared to."""
-    assert "argiope" not in sys.modules
-    assert "transformers" not in sys.modules
+    """The hard rule: the probe must not lean on the pipeline it will be compared to.
+
+    Checked in a subprocess rather than against this process's sys.modules: the U-Net
+    adapter's tests legitimately import `argiope`, and pytest shares one interpreter, so an
+    in-process assertion would depend on test file ordering. The subprocess asserts the real
+    guarantee -- importing repro_segmentr pulls in neither.
+    """
+    import subprocess
+
+    code = (
+        "import sys; sys.path.insert(0, r'%s'); import repro_segmentr; "
+        "print('argiope' in sys.modules, 'transformers' in sys.modules)"
+        % str(Path(rs.__file__).resolve().parent)
+    )
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.strip() == "False False"
 
 
 def test_argiope_root_default_is_two_levels_up():

@@ -36,9 +36,15 @@ The probe therefore expects to be run from the Argiope project root, or pointed 
 .
 ├── PROMPT.md                    the executable specification of the reproduction
 ├── README.md
+├── REPORT.md                    findings, deviations, and the §9 correction
 ├── requirements.txt             transformers / timm / accelerate (not added to the parent project)
-├── repro_segmentr.py            the ported pipeline
-├── tests/test_repro_segmentr.py pure-function tests: no weights, no GPU, no network
+├── repro_segmentr.py            the ported pipeline — the reproduction proper, unchanged
+├── adapt_unet.py                the adapter: Argiope's trained U-Net -> stages E/F/G
+├── R/argiope.R                  thin R interface over the `argiope describe` contract
+├── experiments/                 follow-up work that is NOT part of the reproduction
+│   ├── candidate_selection.py   measured the mechanism claim in REPORT §3.1
+│   └── sanity_gt_vs_unet.py     does a U-Net mask give the same colours as a hand mask?
+├── tests/                       pytest: pure functions, the adapter, and the R layer
 └── outputs/<run_id>/            run artefacts (git-ignored)
 ```
 
@@ -59,6 +65,51 @@ Read `REPORT.md` for the counts, per-prompt hit rates, failure modes, the full D
 list and the recommendation about what earns promotion into `src/argiope/`. The same report
 is written into each run directory. Run artefacts live in `outputs/<run_id>/` and are
 git-ignored; `run_config.json` reproduces a run on its own.
+
+## What came after the replication
+
+The replication is finished and its script is frozen. Two things were built on top of it,
+both kept separate so the reproduction stays a reproduction.
+
+**`adapt_unet.py` — the adapter.** The finding was that SegmentR's *method* (the GroundedSAM
+stages A–D that isolate a part from a text prompt) does not recover the opisthosoma, while
+everything downstream of the mask is sound and segmenter-agnostic. The adapter feeds those
+surviving stages from Argiope's trained U-Net instead:
+
+```
+U-Net mask ─► DetectionResult ─► extract_colors   (E, CIELAB)
+                               ├► write_image_json (F, re-loadable artefact)
+                               └► QA figure + transparent cut-out (G)
+```
+
+Stages A–D are not imported. Two deliberate omissions: `combine_masks`/`merge_masks_by_label`
+are bypassed because they OR same-label detections into one mask and destroy per-specimen
+identity, and part subtraction is gone because a segmenter trained on the part does not need
+it. `--from-json` re-runs colour with the U-Net never loaded.
+
+```bash
+python repro/segmentr/adapt_unet.py --images data/interim/opistho_seg/images --n 20
+python repro/segmentr/adapt_unet.py --from-json repro/segmentr/outputs/<run_id>
+```
+
+**`R/argiope.R` — the R layer.** Wraps, never reimplements: the segmenter stays in torch and R
+calls the published CLI contract (`argiope describe --json --mask`) across a process boundary,
+so R needs no Python configuration. Requires `jsonlite`.
+
+```r
+source("repro/segmentr/R/argiope.R")
+options(argiope.executable = ".../envs/argiope/Scripts/argiope.exe")
+d <- argiope_describe("spider.jpg")
+argiope_palette(d)          # hex, name, coverage, ci_low, ci_high, delta_e
+```
+
+**Does the segmenter's error move the colours?** `experiments/sanity_gt_vs_unet.py` compares,
+over the held-out split, the palette taken from the hand-drawn mask against the palette taken
+from the U-Net mask. On the 18 of 30 images with IoU ≥ 0.7 the dominant-cluster ΔE is 0.8
+(median) and the coverage-weighted palette ΔE is 1.51, with all 18 inside ΔE 5 — below the
+ΔE 2.3 just-noticeable difference, so the colour stage is robust to the segmenter's residual
+error. The remaining tail is not: 7 of 30 held-out images produce an **empty** mask, which the
+adapter logs and counts as a skip rather than passing an empty region downstream.
 
 ## Attribution and licence
 
