@@ -1,7 +1,10 @@
 # Run artefacts: masks, QA plots, CSVs, reports. Regenerable from the script + run_config.json.
-# NOTE: these are derived from third-party photographs and must not be committed. If you
-# change the --out default in adapt_unet.py, add the new directory here in the same commit.
+# These are derived from third-party photographs and must not be committed: only docs/img/
+# carries images, and every one of those has per-image attribution.
+# `outputs/` is the --out default in adapt_unet.py; keep the two in step.
 outputs/
+# out_unet/ was briefly the default and a stray run of it still exists in some working
+# copies; ignored so it cannot be picked up again.
 out_unet/
 
 # --- Python ---
