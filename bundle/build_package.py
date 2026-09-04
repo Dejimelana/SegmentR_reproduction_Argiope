@@ -80,7 +80,7 @@ for f in ("adapt_unet.py", "repro_segmentr.py", "argiope_unet.py"):
     shutil.copy2(SRC / f, PKG / "inst" / f)
 shutil.copy2(SRC / "checkpoints" / "opistho_unet.pt",
              PKG / "inst" / "checkpoints" / "opistho_unet.pt")
-shutil.copytree(SRC / "sample_images", PKG / "inst" / "sample_images")
+shutil.copytree(SRC / "Images" / "sample_images", PKG / "inst" / "sample_images")
 
 # the worked example ships INSIDE the package: installing the tarball alone, with no
 # hand-over folder around it, still gets you the walkthrough. It lives in two places,

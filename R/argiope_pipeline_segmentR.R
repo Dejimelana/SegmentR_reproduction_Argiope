@@ -53,7 +53,7 @@
 ##      <folder>/repro_segmentr.py              <- imported by adapt_unet.py
 ##      <folder>/argiope_unet.py                <- the segmenter class
 ##      <folder>/checkpoints/opistho_unet.pt    <- the trained weights
-##      <folder>/sample_images/                 <- or any folder of images
+##      <folder>/Images/sample_images/          <- or any folder of images
 ##
 ##  RELATION TO THE OTHER FILES
 ##  ---------------------------
@@ -382,10 +382,10 @@ argiope_python <- function(python = NULL) {
   }, character(1))
 }
 
-## Spanish number formatting, to match the rest of the report
-.es <- function(x, d = 1) formatC(x, format = "f", digits = d, big.mark = ".",
-                                  decimal.mark = ",")
-.es_int <- function(x) formatC(x, format = "d", big.mark = ".", decimal.mark = ",")
+## Number formatting for the drawn output: thousands separator, fixed decimals
+.num <- function(x, d = 1) formatC(x, format = "f", digits = d, big.mark = ",",
+                                   decimal.mark = ".")
+.num_int <- function(x) formatC(x, format = "d", big.mark = ",", decimal.mark = ".")
 
 ## The opisthosoma alone: cropped to its bounding box, everything else blanked.
 .cutout <- function(rgb, mask, pad_frac = 0.04, bg = 0.96) {
@@ -496,9 +496,10 @@ argiope_python <- function(python = NULL) {
 
 ## What to process, and where the results go ----------------------------------
 CFG <- list(
-  images   = "sample_images",  # folder of .jpg/.jpeg/.png, searched recursively
-                               #   also bundled: "crops" (40 annotation crops)
-                               #   and "random_ArTaxOr+GBIF" (40 unseen spiders)
+  images   = "Images/sample_images",
+                               # folder of .jpg/.jpeg/.png, searched recursively;
+                               #   also bundled: "Images/crops" (40 annotation crops)
+                               #   and "Images/random_ArTaxOr+GBIF" (40 unseen spiders)
   out      = "runs",           # where run directories are written
   run_id   = "demo",           # name of this run's directory
   n        = NULL,             # NULL = the whole folder; a number = seeded sample
@@ -779,8 +780,7 @@ argiope_pick_one <- function(g, only_with_mask = TRUE) {
   if (!is.na(comp$frac)) {
     graphics::text(0.98, 0.075,
                    sprintf("%s px · %.2f%%",
-                           formatC(item$px, format = "d", big.mark = ".",
-                                   decimal.mark = ","),
+                           .num_int(item$px),
                            100 * comp$frac),
                    adj = c(1, 1), cex = 0.6, col = MUTED, family = "mono")
   }
@@ -1021,7 +1021,7 @@ argiope_card <- function(g, image = NULL, file = NULL, maxdim = 900,
   graphics::text(0.035, ymid, sp, adj = c(0, 0.5), font = 4, cex = 1.05, col = CARD$ink)
   graphics::text(0.035 + graphics::strwidth(sp, font = 4, cex = 1.05) + 0.025, ymid,
                  item$image, adj = c(0, 0.5), cex = 0.72, col = CARD$muted, family = "mono")
-  graphics::text(0.965, ymid, paste("score", .es(item$score, 3)), adj = c(1, 0.5),
+  graphics::text(0.965, ymid, paste("score", .num(item$score, 3)), adj = c(1, 0.5),
                  cex = 0.78, col = CARD$accent, family = "mono")
 
   ## --- the photograph -------------------------------------------------------
@@ -1055,15 +1055,15 @@ argiope_card <- function(g, image = NULL, file = NULL, maxdim = 900,
     graphics::rect(px, y - 0.009, px + 0.022, y + 0.009, col = pal$hex[i], border = CARD$rule)
     graphics::text(px + 0.035, y, paste0(pal$hex[i], "  ·  ", pal$name[i]),
                    adj = c(0, 0.5), cex = 0.68, col = CARD$ink, family = "mono")
-    graphics::text(px + pw, y, paste0(.es(100 * pal$coverage[i], 1), " %"),
+    graphics::text(px + pw, y, paste0(.num(100 * pal$coverage[i], 1), " %"),
                    adj = c(1, 0.5), cex = 0.68, col = CARD$ink, family = "mono")
   }
 
   ## --- footer ---------------------------------------------------------------
   graphics::segments(0, CARD$y_foot[2], 1, CARD$y_foot[2], col = CARD$rule)
   graphics::text(0.035, mean(CARD$y_foot),
-                 sprintf("%s px   %s %% del encuadre   media %s",
-                         .es_int(item$px), .es(100 * frac, 2), mean_hex),
+                 sprintf("%s px   %s %% of the frame   mean %s",
+                         .num_int(item$px), .num(100 * frac, 2), mean_hex),
                  adj = c(0, 0.5), cex = 0.68, col = CARD$muted, family = "mono")
 
   invisible(list(image = image, palette = pal, px = item$px, frac = frac,

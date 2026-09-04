@@ -10,7 +10,13 @@ Everything needed is in this folder, including the trained model. The only thing
 be shipped is a Python interpreter — and `setup.R` will build one for you from R if you have
 none.
 
-## Three ways in
+![One card per specimen: the opisthosoma cut out beside its palette](docs/img/specimen_cards.jpg)
+
+<sub>`argiope_card_grid(g, select = …, ncol = 3)` — six of the 81 masks the model returned over
+100 photographs it had never seen. Each card carries the photograph with the mask outlined, the
+opisthosoma cut out, and its palette named in CIELAB.</sub>
+
+## Four ways in
 
 **As an installed R package:** `package/argiopeSegmentR_0.1.0.tar.gz` installs with one line
 and carries everything, weights included — the worked example among it, so the tarball
@@ -21,8 +27,6 @@ See `package/README.md`.
 plotting functions, the measured performance of every segmenter tried and the three failure
 modes. `cheatsheet_argiopeSegmentR.html` is the same thing for screen, and re-prints to the
 same two pages.
-
-## Two ways in
 
 **Reading the code, and stepping through it:** `argiope_pipeline_segmentR.R` is the whole
 thing in one file, in reading order — auxiliary functions, then configuration, then the
@@ -67,22 +71,22 @@ argiope_install_python()
 
 Then `source("argiope_pipeline_segmentR.R")`.
 
-## The three bundled image folders
+## The three bundled image folders, under `Images/`
 
 | Folder | What it is | Why it is here |
 |---|---|---|
-| `sample_images/` | 6 photographs | the quickest thing to run |
-| `crops/` | 40 crops cut for hand annotation | pre-cropped spiders: the segmenter's easy case |
-| `random_ArTaxOr+GBIF/` | 20 ArTaxOr + 20 GBIF, drawn at random | uncropped field photographs: the honest case |
+| `Images/sample_images/` | 9 photographs | the quickest thing to run |
+| `Images/crops/` | 40 crops cut for hand annotation | pre-cropped spiders: the segmenter's easy case |
+| `Images/random_ArTaxOr+GBIF/` | 20 ArTaxOr + 20 GBIF, drawn at random | uncropped field photographs: the honest case |
 
-None of the 40 in `random_ArTaxOr+GBIF` is among the 150 images used to train the
+None of the 40 in `Images/random_ArTaxOr+GBIF` is among the 150 images used to train the
 segmenter, so what you see there is genuine unseen behaviour. Expect a good fraction to
 come back with no mask at all — on unseen field photographs that happens on roughly one
 image in five, and it is a known limit rather than a fault in this code.
 
 ```r
-g <- argiope_gallery("crops",               out = "runs", run_id = "crops")
-g <- argiope_gallery("random_ArTaxOr+GBIF", out = "runs", run_id = "random")
+g <- argiope_gallery("Images/crops",               out = "runs", run_id = "crops")
+g <- argiope_gallery("Images/random_ArTaxOr+GBIF", out = "runs", run_id = "random")
 ```
 
 ## Your own images
@@ -106,8 +110,22 @@ argiope_palette_of(g, "x.jpg")     # HEX + Lab + coverage per colour cluster
 argiope_plot(g, page = 2)          # the gallery grid, one page
 argiope_plot(g, select = argiope_pick(g))   # choose from a list first
 argiope_dashboard(g, "x.jpg")      # photo + palette + histogram + recoloured mask
+argiope_card(g, "x.jpg")           # one specimen as a card, colours named
+argiope_card_grid(g, page = 1)     # a page of those cards
 argiope_pdf(g, "gallery.pdf")      # every page into one PDF
 ```
+
+![The paginated gallery grid](docs/img/gallery_grid.jpg)
+
+<sub>`argiope_plot(g, select = …, ncol = 3)` — the photograph with the mask outlined and the
+background dimmed, a palette bar proportional to coverage, the leading HEX values, the score and
+the mask area.</sub>
+
+![The four-panel dashboard for one specimen](docs/img/dashboard.jpg)
+
+<sub>`argiope_dashboard(g, img)` — detection and contour · dominant colours with HEX, coverage and
+Lab · RGB histogram of the masked pixels · the mask recoloured by assigning every pixel to its
+cluster centroid. It also returns those numbers.</sub>
 
 Images the model finds nothing in are **never dropped silently** — they are listed with a
 reason, in `argiope_items(g)` and in `runs/<id>/skipped.csv`.
@@ -120,9 +138,9 @@ reason, in `argiope_items(g)` and in `runs/<id>/skipped.csv`.
 | `setup.R` | installs the R side and checks the Python side, without running anything |
 | `adapt_unet.py`, `repro_segmentr.py`, `argiope_unet.py` | the Python side the R layer calls |
 | `checkpoints/opistho_unet.pt` | the trained U-Net, 130 MB |
-| `sample_images/` | 9 photographs, with `ATTRIBUTION.md` |
-| `crops/` | 40 crops made for hand annotation, with `PROVENANCE.md` — the easy case |
-| `random_ArTaxOr+GBIF/` | 40 spiders drawn at random from ArTaxOr and GBIF, with `PROVENANCE.md` |
+| `Images/sample_images/` | 9 photographs, with `ATTRIBUTION.md` |
+| `Images/crops/` | 40 crops made for hand annotation, with `PROVENANCE.md` — the easy case |
+| `Images/random_ArTaxOr+GBIF/` | 40 spiders drawn at random from ArTaxOr and GBIF, with `PROVENANCE.md` |
 
 ## Requirements
 
@@ -186,9 +204,21 @@ five, which is a known limit, not a bug in this code.
 - A mask is **not** automatically correct. On a 100-image unseen sample, 81 produced a mask and
   3 of those were fragments under 0.1% of the frame — all three scoring below 0.70 against a
   median of 0.959, so a score filter separates them. Look at the pictures.
-- Measured against hand-drawn masks on a held-out split, the median IoU is 0.765, and the
-  colour taken from the predicted mask is indistinguishable from the colour taken from the
-  hand-drawn one (ΔE 1.51) wherever IoU ≥ 0.7.
+- Measured against hand-drawn masks on a held-out split (n = 30), the shipped **resnet50**
+  model reaches a median IoU of 0.868, and the colour taken from the predicted mask is
+  indistinguishable by eye from the colour taken from the hand-drawn one (ΔE 0.86, against a
+  just-noticeable difference of 2.3) wherever IoU ≥ 0.7.
+- **A high score is not a guarantee that it found a spider.** The model masks *egg sacs* as
+  though they were abdomens, and scores them like good ones: of the twelve highest-scoring masks
+  over those 100 unseen photographs, **three are egg sacs**. Neither the score nor the mask area
+  separates them — they are large, compact and confidently wrong. This one you can only catch by
+  looking.
+
+![An egg sac masked as though it were an abdomen, at score 0.981](docs/img/failure_eggsac.jpg)
+
+<sub>`131191bffe7c4a47.jpg` — there is no spider in the frame. The mask encloses an egg sac stuck
+to a wall, at score 0.981, and the "opisthosoma palette" is five shades of the sac's papery
+surface.</sub>
 
 ## Credits and licence
 
@@ -196,7 +226,7 @@ The colour, artefact and QA stages are a port of **SegmentR** — Boyko, J. D. (
 *Ecological Informatics* 90:103259, MIT licence. The segmenter and the R layer are from the
 Argiope project. See `THIRD_PARTY_NOTICES.md`.
 
-The six sample photographs are third-party GBIF observations, reproduced with attribution
+The nine sample photographs are third-party GBIF observations, reproduced with attribution
 under Creative Commons licences. Every image folder carries its own attribution file; the
 totals are in `THIRD_PARTY_NOTICES.md`. Most are **CC-BY-NC**,
 which forbids commercial use.

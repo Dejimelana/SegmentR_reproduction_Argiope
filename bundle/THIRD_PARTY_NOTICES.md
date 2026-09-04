@@ -69,9 +69,9 @@ what their licences require:
 
 | Folder | Images | Where the attribution is |
 | --- | ---: | --- |
-| `sample_images/` | 9 | `sample_images/ATTRIBUTION.md` |
-| `crops/` | 40 | `crops/PROVENANCE.md` |
-| `random_ArTaxOr+GBIF/` | 40 | `random_ArTaxOr+GBIF/PROVENANCE.md` |
+| `Images/sample_images/` | 9 | `Images/sample_images/ATTRIBUTION.md` |
+| `Images/crops/` | 40 | `Images/crops/PROVENANCE.md` |
+| `Images/random_ArTaxOr+GBIF/` | 40 | `Images/random_ArTaxOr+GBIF/PROVENANCE.md` |
 
 Each of those files lists, per image, the photographer, the licence and a link to the GBIF
 occurrence. Licences of the 69 GBIF-derived images:
