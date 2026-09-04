@@ -65,7 +65,7 @@ Input photographs under `data/raw/gbif/` belong to the parent Argiope project an
 git-ignored.
 
 **One exception, added deliberately:** `docs/GALERIA.md` and `docs/img/` reproduce
-**downscaled thumbnails** of the 73 photographs for which the pipeline produced a mask, so the
+**downscaled thumbnails** of the 81 photographs for which the pipeline produced a mask, so the
 gallery is viewable in the repository. These are third-party photographs obtained via GBIF
 (largely iNaturalist observations) and are reproduced **with per-image attribution** — the
 photographer, the licence and a link to the GBIF occurrence appear beside every image in
@@ -73,8 +73,8 @@ photographer, the licence and a link to the GBIF occurrence appear beside every 
 
 | Licence | Images |
 | --- | ---: |
-| [CC-BY-NC](https://creativecommons.org/licenses/by-nc/4.0/) | 65 |
-| [CC-BY](https://creativecommons.org/licenses/by/4.0/) | 6 |
+| [CC-BY-NC](https://creativecommons.org/licenses/by-nc/4.0/) | 72 |
+| [CC-BY](https://creativecommons.org/licenses/by/4.0/) | 7 |
 | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | 2 |
 
 All three permit redistribution with attribution; **CC-BY-NC forbids commercial use**, which

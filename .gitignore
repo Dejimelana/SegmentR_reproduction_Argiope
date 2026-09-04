@@ -22,3 +22,7 @@ __pycache__/
 # --- OS ---
 .DS_Store
 Thumbs.db
+
+# Notebook run artefacts (same rule as outputs/: derived from third-party photographs)
+notebook/runs/
+notebook/*.pdf

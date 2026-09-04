@@ -95,6 +95,10 @@ argiope_gallery <- function(dir, out = NULL, run_id = "r-gallery", n = NULL, see
   .need("jsonlite")
   if (!dir.exists(dir) && !file.exists(dir)) stop("no such directory: ", dir, call. = FALSE)
   if (is.null(out)) out <- file.path(tempdir(), "argiope_gallery")
+  # absolutise before handing it over: adapt_unet.py resolves a relative --out against the
+  # Argiope project root, not against R's working directory, so the two would disagree.
+  if (!dir.exists(out)) dir.create(out, recursive = TRUE, showWarnings = FALSE)
+  out <- normalizePath(out, winslash = "/", mustWork = TRUE)
   if (is.null(adapter)) adapter <- file.path(.repo_root(), "adapt_unet.py")
   if (!file.exists(adapter)) stop("adapt_unet.py not found: ", adapter, call. = FALSE)
 
