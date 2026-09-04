@@ -13,10 +13,12 @@ none.
 
 ## Two ways in
 
-**Reading the code:** `argiope_pipeline_segmentR.R` is the whole thing in one file, in
-reading order — auxiliary functions, then configuration, then the pipeline in seven numbered
-steps. Sourcing it runs everything; set `CFG$autorun <- FALSE` in its configuration section
-to load the functions without running. Start here if you want to understand what happens.
+**Reading the code, and stepping through it:** `argiope_pipeline_segmentR.R` is the whole
+thing in one file, in reading order — auxiliary functions, then configuration, then the
+functions themselves, then a walkthrough. Sections 1-3 only *define* things; section 4 is a
+numbered walkthrough you run **one step at a time** (put the cursor on a line, Ctrl+Enter),
+each printing something to look at before you move on. Sourcing the file runs the whole
+walkthrough instead. Start here if you want to understand what happens.
 
 **Using it:** `setup.R` then `run_demo.R`, which split the same code across files. Identical
 behaviour — verified on the same folder: same masks, same palettes, same counts.

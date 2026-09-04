@@ -23,14 +23,16 @@
 ##
 ##  HOW TO RUN
 ##  ----------
-##      source("argiope_pipeline_segmentR.R")     # runs the pipeline (CFG$autorun)
+##  Sections 1-3 only DEFINE functions and settings. Section 4 is the walkthrough
+##  and it is the only part that runs anything.
 ##
-##  Set CFG$autorun to FALSE (section 2) to load the functions without running,
-##  then drive it by hand:
+##      step by step   open this file, put the cursor on a line or select a block,
+##                     Ctrl+Enter. Every step prints something worth looking at
+##                     before you move on. This is the intended way.
 ##
-##      g <- argiope_gallery(CFG$images, CFG$out, CFG$run_id)
-##      argiope_plot(g, page = 1)
-##      argiope_dashboard(g, argiope_items(g)$image[1])
+##      all at once    source("argiope_pipeline_segmentR.R")
+##
+##  Settings live in one place, section 2 (CFG). Change them there.
 ##
 ##  LAYOUT THIS FILE EXPECTS
 ##  ------------------------
@@ -442,10 +444,7 @@ CFG <- list(
   ## Drawing
   per_page = 6,                # cells per gallery page
   maxdim   = 520,              # longest side of the rasters drawn (bigger = slower)
-  pdf_file = "demo_gallery.pdf",
-
-  ## Set to FALSE to load the functions without running anything
-  autorun  = TRUE
+  pdf_file = "demo_gallery.pdf"
 )
 
 ## Packages ------------------------------------------------------------------
@@ -464,8 +463,8 @@ SPECIES_LABEL <- c(argiope_argentata = "A. argentata",
 
 ## #############################################################################
 ##  SECTION 3 — THE PIPELINE
-##  Step 1 segment · 2 load · 3 inspect · 4 choose · 5 grid · 6 dashboard ·
-##  7 export. Each step is one function; section 3.8 runs them in order.
+##  One function per stage: segment · load · inspect · choose · grid · dashboard
+##  · export. Defining them runs nothing; section 4 is where they get used.
 ## #############################################################################
 
 ## -----------------------------------------------------------------------------
@@ -878,58 +877,123 @@ argiope_pdf <- function(g, file = "argiope_gallery.pdf", per_page = 6, select = 
 }
 
 
-## -----------------------------------------------------------------------------
-## 3.8  RUN IT — the seven steps in order, using CFG
-## -----------------------------------------------------------------------------
+## #############################################################################
+##  SECTION 4 — RUN IT, ONE STEP AT A TIME
+##
+##  Sections 1-3 only DEFINE things; nothing has run yet. From here down the code
+##  executes. Run it the way you prefer:
+##
+##    * step by step  - put the cursor on a line (or select a block) and press
+##                      Ctrl+Enter in RStudio / VS Code. This is the intended way:
+##                      every step prints something you should look at before
+##                      moving on.
+##    * all at once   - source("argiope_pipeline_segmentR.R"), which runs the
+##                      whole of section 4 top to bottom.
+##
+##  Steps 1 and 2 are the only ones you must run in order. After that, 4 to 8 are
+##  independent: re-run any of them as often as you like, they only read `g`.
+## #############################################################################
 
-argiope_run_pipeline <- function(cfg = CFG) {
-  ## 0 — refuse to start against a half-built environment. The symptom otherwise
-  ##     is every image skipped with a Python import error, which reads as a
-  ##     segmentation failure and is not one.
-  install_r_packages()
-  if (!isTRUE(argiope_status())) {
-    stop("Setup is incomplete - see the report above.", call. = FALSE)
-  }
-  cat("\nPython:", argiope_python(), "\n\n")
 
-  ## 1 — segment the folder
-  g <- argiope_gallery(dir = cfg$images, out = cfg$out, run_id = cfg$run_id,
-                       n = cfg$n, seed = cfg$seed, n_colors = cfg$n_colors,
-                       weights = cfg$weights, device = cfg$device, reuse = cfg$reuse)
-  print(g)
+## ---- STEP 0 · is the machine ready? -----------------------------------------
+## Look for READY. If the Python side is incomplete every image will fail with an
+## import error, which reads like a segmentation failure and is not one.
 
-  ## 2/3 — the table, before the pictures
-  it <- argiope_items(g)
-  print(it[, c("image", "group", "has_mask", "score", "px")])
-  cat("\nwith a mask:", sum(it$has_mask), "of", nrow(it), "\n")
-  if (any(!it$has_mask)) print(subset(it, !has_mask)[, c("image", "reason")])
-  if (!any(it$has_mask)) {
-    .explain_empty(g)
-    return(invisible(g))
-  }
+install_r_packages()
+argiope_status()
 
-  ## 4 — the palette of the first specimen
-  first <- it$image[it$has_mask][1]
-  cat("\npalette of", first, "\n")
-  print(argiope_palette_of(g, first))
 
-  ## 5 — the gallery grid
-  cat("\npages of", cfg$per_page, ":", argiope_pages(g, cfg$per_page), "\n")
-  argiope_plot(g, page = 1, per_page = cfg$per_page, maxdim = cfg$maxdim)
+## ---- STEP 1 · segment the folder --------------------------------------------
+## The only slow step: it loads the model once and walks the whole folder. A
+## finished matching run is reused, so running this line again is cheap.
+## Look at: how many images came back with a mask.
 
-  ## 6 — the dashboard for that specimen
-  res <- argiope_dashboard(g, first)
-  cat("\nmask:", res$mask_px, "px  mean:", res$mean_color,
-      " median:", res$median_color, "\n")
+g <- argiope_gallery(dir      = CFG$images,
+                     out      = CFG$out,
+                     run_id   = CFG$run_id,
+                     n        = CFG$n,
+                     seed     = CFG$seed,
+                     n_colors = CFG$n_colors,
+                     weights  = CFG$weights,
+                     device   = CFG$device,
+                     reuse    = CFG$reuse)
 
-  ## 7 — every page to a PDF
-  argiope_pdf(g, cfg$pdf_file, per_page = cfg$per_page, maxdim = cfg$maxdim)
+g                                    # the summary line
 
-  cat("\nDone. Artefacts in", file.path(cfg$out, cfg$run_id), "and", cfg$pdf_file, "\n")
-  cat("Your own images:  argiope_gallery(\"C:/path/to/images\", out = \"runs\", run_id = \"mine\")\n")
-  invisible(g)
-}
 
-if (isTRUE(CFG$autorun)) {
-  g <- argiope_run_pipeline()
-}
+## ---- STEP 2 · the table, before any picture ---------------------------------
+## One row per image. `score` is the segmenter's confidence, `px` the mask size.
+## Look at: whether has_mask is TRUE where you expect it.
+
+it <- argiope_items(g)
+it[, c("image", "group", "has_mask", "score", "px")]
+
+
+## ---- STEP 3 · what failed, and why ------------------------------------------
+## Images with no mask are never dropped silently. If this is empty, good.
+## A reason mentioning "No module named" is an environment problem, not the model.
+
+sum(it$has_mask)                     # how many worked
+subset(it, !has_mask)[, c("image", "reason")]
+
+
+## ---- STEP 4 · the palette of one specimen -----------------------------------
+## `coverage` is the share of the mask's pixels in that cluster; lab_* are the
+## CIELAB coordinates of its centroid. HEX + Lab + coverage is the "pantone".
+## Change `first` to any file name from step 2 to inspect a different specimen.
+
+first <- it$image[it$has_mask][1]
+first
+argiope_palette_of(g, first)
+
+
+## ---- STEP 5 · the gallery, page by page -------------------------------------
+## Each cell: the photograph with the mask outlined, the palette bar proportional
+## to coverage, the leading HEX values, the score and the mask area.
+## Run the second line again with page = 2, 3, ... to walk through the pages.
+
+argiope_pages(g, CFG$per_page)       # how many pages there are
+
+argiope_plot(g, page = 1, per_page = CFG$per_page, maxdim = CFG$maxdim)
+
+
+## ---- STEP 6 · draw only the specimens you choose ----------------------------
+## In an interactive session argiope_pick() opens a real selection list; in a
+## script it returns everything. You can also select by name or by index.
+
+sel <- argiope_pick(g)
+## sel <- it$image[it$has_mask][1:3]            # ... or by name
+## sel <- 1:3                                   # ... or by position
+
+argiope_plot(g, select = sel, per_page = CFG$per_page, maxdim = CFG$maxdim)
+
+
+## ---- STEP 7 · the four-panel dashboard for one specimen ---------------------
+## Photograph with box and contour · dominant colours · RGB histogram of the
+## masked pixels · the mask recoloured by centroid. It also RETURNS the numbers,
+## so the panel is not the only place they exist.
+
+res <- argiope_dashboard(g, first)
+
+res$mask_px
+res$mean_color
+res$cluster_sizes
+
+## argiope_dashboard(g)                          # ... or pick one from a list
+## argiope_dashboard(g, first, file = "card.png")  # ... or write it to a PNG
+
+
+## ---- STEP 8 · export every page to one PDF ----------------------------------
+## Rasters go into the PDF uncompressed, so lower maxdim for a large gallery.
+
+argiope_pdf(g, CFG$pdf_file, per_page = CFG$per_page, maxdim = CFG$maxdim)
+
+
+## ---- WHERE IT ALL LANDED ----------------------------------------------------
+## run_config.json records every parameter: a run is reproducible from it alone.
+
+file.path(CFG$out, CFG$run_id)
+head(list.files(file.path(CFG$out, CFG$run_id), recursive = TRUE), 12)
+
+## Your own images:
+##   g <- argiope_gallery("C:/path/to/images", out = "runs", run_id = "mine")
