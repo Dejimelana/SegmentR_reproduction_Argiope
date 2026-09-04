@@ -1,5 +1,5 @@
 <!-- These files live at the ROOT of a hand-over folder, beside adapt_unet.py,
-     repro_segmentr.py, argiope_unet.py, R/, checkpoints/ and sample_images/. -->
+     repro_segmentr.py, argiope_unet.py, R/, checkpoints/ and the image folders. -->
 
 # Argiope × SegmentR — opisthosoma masks and CIELAB palettes, from R
 
@@ -20,8 +20,9 @@ numbered walkthrough you run **one step at a time** (put the cursor on a line, C
 each printing something to look at before you move on. Sourcing the file runs the whole
 walkthrough instead. Start here if you want to understand what happens.
 
-**Using it:** `setup.R` then `run_demo.R`, which split the same code across files. Identical
-behaviour — verified on the same folder: same masks, same palettes, same counts.
+**Checking the machine first:** `setup.R` installs the R packages and reports whether the
+Python side is ready, without running anything. Sourcing the pipeline file runs the
+walkthrough, so this is the way to look before you leap.
 
 ## Quick start
 
@@ -33,8 +34,10 @@ source("setup.R")     # installs 3 R packages, then tells you what is still miss
 `setup.R` ends with a status report. If it says **READY**:
 
 ```r
-source("run_demo.R")  # runs the six bundled images end to end
+source("argiope_pipeline_segmentR.R")   # runs the walkthrough end to end
 ```
+
+Or open that file and run section 4 one step at a time, which is the intended way.
 
 If it says the Python side is missing, either point the bundle at a Python you already have:
 
@@ -49,7 +52,7 @@ argiope_status()
 argiope_install_python()
 ```
 
-Then `source("run_demo.R")`.
+Then `source("argiope_pipeline_segmentR.R")`.
 
 ## The three bundled image folders
 
@@ -100,8 +103,8 @@ reason, in `argiope_items(g)` and in `runs/<id>/skipped.csv`.
 
 | | |
 |---|---|
-| `setup.R` | installs the R side, checks the Python side, can build it |
-| `run_demo.R` | the whole workflow on the bundled images |
+| `argiope_pipeline_segmentR.R` | **the whole workflow in one file — start here** |
+| `setup.R` | installs the R side and checks the Python side, without running anything |
 | `Argiope_SegmentR_R.ipynb` | the same thing as a Jupyter notebook (needs an R kernel) |
 | `R/argiope_segmentR.R` | all the R functions |
 | `adapt_unet.py`, `repro_segmentr.py`, `argiope_unet.py` | the Python side the R layer calls |
@@ -109,8 +112,6 @@ reason, in `argiope_items(g)` and in `runs/<id>/skipped.csv`.
 | `sample_images/` | six photographs, with `ATTRIBUTION.md` |
 | `crops/` | 40 crops made for hand annotation — pre-cropped spiders, the easy case |
 | `random_ArTaxOr+GBIF/` | 40 spiders drawn at random from ArTaxOr and GBIF, with `PROVENANCE.md` |
-| `docs/` | a step-by-step tutorial (Spanish) |
-| `extras/argiope.R` | **does not work standalone** — see below |
 
 ## Requirements
 
@@ -170,9 +171,9 @@ five, which is a known limit, not a bug in this code.
 - Measured against hand-drawn masks on a held-out split, the median IoU is 0.765, and the
   colour taken from the predicted mask is indistinguishable from the colour taken from the
   hand-drawn one (ΔE 1.51) wherever IoU ≥ 0.7.
-- `extras/argiope.R` is a different entry point that wraps the full `argiope describe` command
-  line. It needs the whole Argiope project installed — package, configs, taxonomy files and a
-  second checkpoint — so it will **not** run from this folder. It is included for reference.
+- `R/argiope_segmentR.R` is the same code split across functions, kept because the
+  notebook sources it. If you only use `argiope_pipeline_segmentR.R`, you can delete
+  the notebook and that file together.
 
 ## Credits and licence
 

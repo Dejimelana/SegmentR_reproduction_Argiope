@@ -135,7 +135,7 @@ argiope_status <- function() {
   }
 
   ready <- !length(r_missing) && file.exists(ck) && isTRUE(st$ok)
-  cat("\n", if (ready) "READY - run: source(\"run_demo.R\")"
+  cat("\n", if (ready) "READY - run: source(\"argiope_pipeline_segmentR.R\")"
       else "NOT READY - see above; argiope_install_python() builds the Python side for you",
       "\n", sep = "")
   invisible(ready)

@@ -45,9 +45,10 @@
 ##
 ##  RELATION TO THE OTHER FILES
 ##  ---------------------------
-##  This is a consolidated copy of R/argiope_segmentR.R + setup.R + run_demo.R,
-##  written to be read top to bottom. The behaviour is the same; keep the two in
-##  step if you edit either.
+##  This file is self-contained and is the entry point. R/argiope_segmentR.R holds
+##  the same code split into pieces; the notebook sources that one, so the two must
+##  be kept in step if you edit either. setup.R is a subset of section 1.2, kept
+##  separately so you can check the machine WITHOUT running the pipeline.
 ##
 ##  ORDER NOTE: helpers come first and refer to constants defined in section 2.
 ##  That is fine in R — a function body resolves its names when it is CALLED,
