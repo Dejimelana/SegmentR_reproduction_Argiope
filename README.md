@@ -133,9 +133,16 @@ argiope_palette(d)          # hex, name, coverage, ci_low, ci_high, delta_e
 
 **The gallery.** `docs/GALERIA.md` shows what the adapted pipeline actually produces on 100
 GBIF photographs that were never annotated for training: for each one, the photograph with the
-mask outlined, the isolated opisthosoma, and the palette stage E extracted. 73 of the 100 yield
-a mask; the 27 that yield nothing are listed too. Every photograph carries its photographer,
-licence and GBIF link — see `THIRD_PARTY_NOTICES.md`. `docs/galeria.html` is the interactive
+mask outlined, the isolated opisthosoma, and the palette stage E extracted. **81 of the 100
+yield a mask; the 19 that yield nothing are listed too.** A mask is not automatically correct:
+3 of the 81 are fragments under 0.1% of the frame, all three scoring below 0.70 against a
+median of 0.959.
+
+Those figures belong to a specific checkpoint — **`resnet50`, 512 px, 130 MB, 2026-09-03** —
+and the gallery header names it. An earlier pass on the previous `resnet34` weights gave 73 of
+100 and sat here unlabelled until the numbers diverged; naming the checkpoint in both places is
+what stops that repeating. Every photograph carries its photographer, licence and GBIF link —
+see `THIRD_PARTY_NOTICES.md`. `docs/galeria.html` is the interactive
 version (GitHub shows HTML source rather than rendering it, so download it or serve it through
 GitHub Pages).
 
