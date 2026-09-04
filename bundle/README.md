@@ -16,9 +16,10 @@ none.
 and carries everything, weights included. Work through `package/example_argiopeSegmentR.R`.
 See `package/README.md`.
 
-**As a cheatsheet:** `cheatsheet_argiopeSegmentR.html` — two printable pages with the usage,
-the plotting functions, the measured performance of every segmenter tried, and the three
-failure modes.
+**As a cheatsheet:** `cheatsheet_argiopeSegmentR.pdf` — two A4 pages with the usage, the
+plotting functions, the measured performance of every segmenter tried and the three failure
+modes. `cheatsheet_argiopeSegmentR.html` is the same thing for screen, and re-prints to the
+same two pages.
 
 ## Two ways in
 

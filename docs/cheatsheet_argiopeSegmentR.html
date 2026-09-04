@@ -91,13 +91,30 @@ figcaption{font-size:11px;color:var(--ink-2);margin-top:5px}
 .foot{margin-top:16px;padding-top:8px;border-top:1px solid var(--rule);
       font-size:10.5px;color:var(--ink-3)}
 
+@page{size:A4;margin:9mm}
 @media print{
-  body{background:#fff;font-size:9.6pt}
+  /* pin the light palette: a printer must not inherit the viewer's dark theme */
+  :root{
+    --paper:#FFFFFF; --card:#FFFFFF; --sunk:#F3F5EC;
+    --ink:#16180F; --ink-2:#4E5443; --ink-3:#6F7566;
+    --rule:#CFD4C1; --rule-2:#AFB69C;
+    --accent:#6F5809; --accent-mark:#C8A21E; --accent-soft:#F6EFD2;
+    --bad:#7E4229; --bad-soft:#F7E6DD;
+  }
+  body{background:#fff;font-size:8.4pt;line-height:1.35}
   .page{max-width:none;padding:0}
   .pagebreak{break-before:page}
-  .box{break-inside:avoid}
+  .box,figure,table{break-inside:avoid}
+  .sec{margin:10px 0 6px}
+  h1{font-size:22pt}
+  pre{font-size:7.2pt}
+  /* cap the figures: at full width on A4 they alone push past two pages */
+  figure img{width:auto;max-width:100%;max-height:74mm;margin:0 auto}
+  .cols figure img{max-height:52mm}
+  figcaption{font-size:6.8pt;margin-top:3px}
+  .foot{font-size:6.6pt;margin-top:8px}
 }
-@media (max-width:820px){.cols{grid-template-columns:1fr}.cols-2{grid-template-columns:1fr}}
+@media screen and (max-width:820px){.cols{grid-template-columns:1fr}.cols-2{grid-template-columns:1fr}}
 </style>
 
 <div class="page">
