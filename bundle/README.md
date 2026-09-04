@@ -51,6 +51,24 @@ argiope_install_python()
 
 Then `source("run_demo.R")`.
 
+## The three bundled image folders
+
+| Folder | What it is | Why it is here |
+|---|---|---|
+| `sample_images/` | 6 photographs | the quickest thing to run |
+| `crops/` | 40 crops cut for hand annotation | pre-cropped spiders: the segmenter's easy case |
+| `random_ArTaxOr+GBIF/` | 20 ArTaxOr + 20 GBIF, drawn at random | uncropped field photographs: the honest case |
+
+None of the 40 in `random_ArTaxOr+GBIF` is among the 150 images used to train the
+segmenter, so what you see there is genuine unseen behaviour. Expect a good fraction to
+come back with no mask at all — on unseen field photographs that happens on roughly one
+image in five, and it is a known limit rather than a fault in this code.
+
+```r
+g <- argiope_gallery("crops",               out = "runs", run_id = "crops")
+g <- argiope_gallery("random_ArTaxOr+GBIF", out = "runs", run_id = "random")
+```
+
 ## Your own images
 
 One argument changes:
@@ -89,6 +107,8 @@ reason, in `argiope_items(g)` and in `runs/<id>/skipped.csv`.
 | `adapt_unet.py`, `repro_segmentr.py`, `argiope_unet.py` | the Python side the R layer calls |
 | `checkpoints/opistho_unet.pt` | the trained U-Net, 130 MB |
 | `sample_images/` | six photographs, with `ATTRIBUTION.md` |
+| `crops/` | 40 crops made for hand annotation — pre-cropped spiders, the easy case |
+| `random_ArTaxOr+GBIF/` | 40 spiders drawn at random from ArTaxOr and GBIF, with `PROVENANCE.md` |
 | `docs/` | a step-by-step tutorial (Spanish) |
 | `extras/argiope.R` | **does not work standalone** — see below |
 

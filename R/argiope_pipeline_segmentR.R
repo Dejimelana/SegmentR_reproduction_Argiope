@@ -432,6 +432,8 @@ argiope_python <- function(python = NULL) {
 ## What to process, and where the results go ----------------------------------
 CFG <- list(
   images   = "sample_images",  # folder of .jpg/.jpeg/.png, searched recursively
+                               #   also bundled: "crops" (40 annotation crops)
+                               #   and "random_ArTaxOr+GBIF" (40 unseen spiders)
   out      = "runs",           # where run directories are written
   run_id   = "demo",           # name of this run's directory
   n        = NULL,             # NULL = the whole folder; a number = seeded sample
