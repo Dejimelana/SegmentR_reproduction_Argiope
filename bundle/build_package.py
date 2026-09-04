@@ -112,7 +112,8 @@ also MIT licensed; see inst/repro_segmentr.py for the ported code.
 exports = ["argiope_status", "argiope_python", "argiope_use_python", "argiope_install_python",
            "install_r_packages", "argiope_gallery", "argiope_load_gallery", "argiope_items",
            "argiope_palette_of", "argiope_pick", "argiope_pick_one", "argiope_pages",
-           "argiope_plot", "argiope_dashboard", "argiope_pdf"]
+           "argiope_plot", "argiope_dashboard", "argiope_pdf",
+           "argiope_card", "argiope_card_grid"]
 ns = "\n".join(f"export({e})" for e in exports)
 ns += "\nS3method(print, argiope_gallery)\n"
 ns += "importFrom(grDevices, convertColor, col2rgb, dev.off, pdf, png)\n"
@@ -177,4 +178,17 @@ rd("plots", "Draw the gallery",
    "palette bar, score and mask area. \\code{argiope_dashboard} draws four panels for one "
    "specimen. \\code{argiope_pick} opens a selection list in an interactive session and "
    "returns everything in a script.")
-print("man/: 4 ficheros Rd con alias para las 15 funciones")
+rd("cards", "The specimen card, and pages of cards",
+   ["argiope_card", "argiope_card_grid"],
+   "argiope_card(g, image = NULL, file = NULL, maxdim = 900, width = 5.2,\n"
+   "             height = 7.1, res = 150, mar = c(0, 0, 0, 0))\n"
+   "argiope_card_grid(g, page = 1, per_page = 6, ncol = NULL, select = NULL,\n"
+   "                  file = NULL, card_w = 3.5, card_h = 4.8, res = 150,\n"
+   "                  maxdim = 600, gap = 0.35, page_bg = \"#0B0D07\")",
+   "\\code{argiope_card} draws one specimen as a card: header, the photograph with the "
+   "mask outlined, the isolated opisthosoma beside its palette listed by nearest colour "
+   "name, and a footer with the mask size. \\code{argiope_card_grid} lays several on a "
+   "page, calling \\code{argiope_card} per panel so the two cannot diverge. The card is "
+   "designed tall, so the page is sized from columns and rows times that shape.",
+   "Invisibly, the palette and mask statistics of the card drawn.")
+print(f"man/: 5 ficheros Rd con alias para las {len(exports)} funciones")

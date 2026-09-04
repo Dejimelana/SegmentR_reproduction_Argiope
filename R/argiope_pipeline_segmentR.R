@@ -348,6 +348,59 @@ argiope_python <- function(python = NULL) {
 
 
 ## -----------------------------------------------------------------------------
+## 1.6b Colour names and the cut-out, used by the specimen card (3.8)
+##      The nearest name is computed against R's own colour table, in CIELAB.
+## -----------------------------------------------------------------------------
+
+## Nearest named colour, computed in CIELAB against R's own colour table.
+## The numbered greys (gray0..gray100) and the "grey" spellings are dropped, or
+## every dark tone comes back as "gray27" instead of "dimgray".
+.NAMED <- local({
+  nm <- grDevices::colors()
+  nm <- nm[!grepl("[0-9]", nm) & !grepl("^grey", nm)]
+  list(name = nm,
+       lab = grDevices::convertColor(t(grDevices::col2rgb(nm)) / 255, "sRGB", "Lab"))
+})
+
+.nearest_name <- function(hex) {
+  lab <- grDevices::convertColor(t(grDevices::col2rgb(hex)) / 255, "sRGB", "Lab")
+  vapply(seq_len(nrow(lab)), function(i) {
+    d <- colSums((t(.NAMED$lab) - as.numeric(lab[i, ]))^2)
+    .NAMED$name[which.min(d)]
+  }, character(1))
+}
+
+## Spanish number formatting, to match the rest of the report
+.es <- function(x, d = 1) formatC(x, format = "f", digits = d, big.mark = ".",
+                                  decimal.mark = ",")
+.es_int <- function(x) formatC(x, format = "d", big.mark = ".", decimal.mark = ",")
+
+## The opisthosoma alone: cropped to its bounding box, everything else blanked.
+.cutout <- function(rgb, mask, pad_frac = 0.04, bg = 0.96) {
+  ys <- which(rowSums(mask) > 0)
+  xs <- which(colSums(mask) > 0)
+  pad <- max(2L, as.integer(pad_frac * max(diff(range(ys)), diff(range(xs)))))
+  y0 <- max(1L, min(ys) - pad); y1 <- min(nrow(mask), max(ys) + pad)
+  x0 <- max(1L, min(xs) - pad); x1 <- min(ncol(mask), max(xs) + pad)
+  sub <- rgb[y0:y1, x0:x1, , drop = FALSE]
+  sm <- mask[y0:y1, x0:x1, drop = FALSE]
+  out <- array(bg, dim(sub))
+  for (ch in 1:3) { v <- out[, , ch]; s <- sub[, , ch]; v[sm] <- s[sm]; out[, , ch] <- v }
+  out
+}
+
+## Draw a raster inside a box, preserving its aspect ratio and centring it.
+.fit_raster <- function(img, xlim, ylim) {
+  pin <- graphics::par("pin")                       # plot region, inches
+  bw <- diff(xlim) * pin[1]; bh <- diff(ylim) * pin[2]
+  ar <- dim(img)[2] / dim(img)[1]                   # width / height
+  if (ar > bw / bh) { w <- diff(xlim); h <- (bw / ar) / pin[2] }
+  else              { h <- diff(ylim); w <- (bh * ar) / pin[1] }
+  x0 <- mean(xlim) - w / 2; y0 <- mean(ylim) - h / 2
+  graphics::rasterImage(img, x0, y0, x0 + w, y0 + h, interpolate = TRUE)
+}
+
+## -----------------------------------------------------------------------------
 ## 1.7  Reading a finished run
 ## -----------------------------------------------------------------------------
 
@@ -461,6 +514,24 @@ MUTED      <- "#7C8270"
 SPECIES_LABEL <- c(argiope_argentata = "A. argentata",
                    argiope_aurantia  = "A. aurantia",
                    argiope_bruennichi = "A. bruennichi")
+
+## The specimen card's own palette and layout (see argiope_card, 3.8).
+## The y-bands ARE the layout: change these numbers, change the card.
+CARD <- list(
+  bg      = "#14170F",   # card ground
+  head    = "#1C2016",   # header band
+  photo   = "#0F1209",   # letterbox behind the photograph
+  panel   = "#1C2016",   # the palette panel
+  ink     = "#E9EBDE",
+  muted   = "#7C8270",
+  accent  = "#E8C64A",   # score, and the mask outline
+  rule    = "#2E3426",
+  ## vertical bands, bottom to top
+  y_foot  = c(0.000, 0.070),
+  y_panel = c(0.070, 0.360),
+  y_photo = c(0.360, 0.915),
+  y_head  = c(0.915, 1.000)
+)
 
 
 ## #############################################################################
@@ -879,6 +950,160 @@ argiope_pdf <- function(g, file = "argiope_gallery.pdf", per_page = 6, select = 
 }
 
 
+## -----------------------------------------------------------------------------
+## 3.8  The gallery card for one specimen
+##      Header, the photograph with the mask outlined, the isolated opisthosoma
+##      beside its palette, and a footer. Drawn in one 0..1 region, so the layout
+##      is the list of y-bands in CARD (section 2).
+## -----------------------------------------------------------------------------
+
+#' The gallery card for one specimen.
+#'
+#' @param g A gallery from argiope_gallery() / argiope_load_gallery().
+#' @param image Image file name; omit to choose from a list.
+#' @param file Optional PNG path. Omit to draw on the current device.
+#' @param maxdim Longest side of the photograph as drawn.
+argiope_card <- function(g, image = NULL, file = NULL, maxdim = 900,
+                         width = 5.2, height = 7.1, res = 150,
+                         mar = c(0, 0, 0, 0)) {
+  if (is.null(image)) image <- argiope_pick_one(g)
+  it <- g$items[g$items$image == image, , drop = FALSE]
+  if (!nrow(it)) stop("no such image in this gallery: ", image, call. = FALSE)
+  item <- it[1, ]
+  if (!isTRUE(item$has_mask)) {
+    stop("this image has no mask (", if (is.na(item$reason)) "empty" else item$reason, ")",
+         call. = FALSE)
+  }
+
+  ## --- the data -------------------------------------------------------------
+  rgb_full <- .read_image(item$path)
+  if (length(dim(rgb_full)) == 2L) rgb_full <- array(rgb_full, c(dim(rgb_full), 3))
+  rgb_full <- rgb_full[, , 1:3, drop = FALSE]
+  mask_full <- .as_gray(.read_image(item$mask)) > 0.5
+  frac <- sum(mask_full) / prod(dim(mask_full))
+
+  pal <- argiope_palette_of(g, image)
+  pal$name <- .nearest_name(pal$hex)
+  mean_hex <- g$colors[g$colors$image == image, ][1, ]$mean_color
+
+  k <- .decimate_k(dim(rgb_full)[1:2], maxdim)
+  photo <- .compose(.decimate(rgb_full, k), .decimate(mask_full, k))
+  thumb <- .cutout(rgb_full, mask_full)
+  thumb <- .decimate(thumb, .decimate_k(dim(thumb)[1:2], 260))
+
+  ## --- the canvas -----------------------------------------------------------
+  if (!is.null(file)) {
+    grDevices::png(file, width = width * res, height = height * res, res = res)
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
+  op <- graphics::par(mar = mar, bg = CARD$bg, xaxs = "i", yaxs = "i")
+  on.exit(graphics::par(op), add = TRUE)
+  graphics::plot.new(); graphics::plot.window(c(0, 1), c(0, 1))
+  graphics::rect(0, 0, 1, 1, col = CARD$bg, border = NA)
+
+  ## --- header ---------------------------------------------------------------
+  graphics::rect(0, CARD$y_head[1], 1, CARD$y_head[2], col = CARD$head, border = NA)
+  graphics::segments(0, CARD$y_head[1], 1, CARD$y_head[1], col = CARD$rule)
+  ymid <- mean(CARD$y_head)
+  sp <- sub("^argiope_", "A. ", item$group)
+  graphics::text(0.035, ymid, sp, adj = c(0, 0.5), font = 4, cex = 1.05, col = CARD$ink)
+  graphics::text(0.035 + graphics::strwidth(sp, font = 4, cex = 1.05) + 0.025, ymid,
+                 item$image, adj = c(0, 0.5), cex = 0.72, col = CARD$muted, family = "mono")
+  graphics::text(0.965, ymid, paste("score", .es(item$score, 3)), adj = c(1, 0.5),
+                 cex = 0.78, col = CARD$accent, family = "mono")
+
+  ## --- the photograph -------------------------------------------------------
+  graphics::rect(0, CARD$y_photo[1], 1, CARD$y_photo[2], col = CARD$photo, border = NA)
+  .fit_raster(photo, c(0.02, 0.98), CARD$y_photo + c(0.012, -0.012))
+
+  ## --- cut-out + palette ----------------------------------------------------
+  graphics::rect(0, CARD$y_panel[1], 1, CARD$y_panel[2], col = CARD$panel, border = NA)
+  graphics::segments(0, CARD$y_panel[2], 1, CARD$y_panel[2], col = CARD$rule)
+
+  tb <- c(0.045, 0.30)                                   # thumbnail x-range
+  ty <- c(CARD$y_panel[2] - 0.19, CARD$y_panel[2] - 0.02)
+  graphics::rect(tb[1], ty[1], tb[2], ty[2], col = "#F5F5F0", border = CARD$rule)
+  .fit_raster(thumb, tb + c(0.006, -0.006), ty + c(0.006, -0.006))
+
+  px <- 0.34                                             # palette x-range
+  pw <- 0.62
+  bar <- c(CARD$y_panel[2] - 0.055, CARD$y_panel[2] - 0.022)
+  x <- px
+  for (i in seq_len(nrow(pal))) {
+    w <- pw * pal$coverage[i]
+    graphics::rect(x, bar[1], x + w, bar[2], col = pal$hex[i], border = NA)
+    x <- x + w
+  }
+
+  rows <- nrow(pal)
+  top <- bar[1] - 0.028
+  step <- 0.032
+  for (i in seq_len(rows)) {
+    y <- top - (i - 1) * step
+    graphics::rect(px, y - 0.009, px + 0.022, y + 0.009, col = pal$hex[i], border = CARD$rule)
+    graphics::text(px + 0.035, y, paste0(pal$hex[i], "  ·  ", pal$name[i]),
+                   adj = c(0, 0.5), cex = 0.68, col = CARD$ink, family = "mono")
+    graphics::text(px + pw, y, paste0(.es(100 * pal$coverage[i], 1), " %"),
+                   adj = c(1, 0.5), cex = 0.68, col = CARD$ink, family = "mono")
+  }
+
+  ## --- footer ---------------------------------------------------------------
+  graphics::segments(0, CARD$y_foot[2], 1, CARD$y_foot[2], col = CARD$rule)
+  graphics::text(0.035, mean(CARD$y_foot),
+                 sprintf("%s px   %s %% del encuadre   media %s",
+                         .es_int(item$px), .es(100 * frac, 2), mean_hex),
+                 adj = c(0, 0.5), cex = 0.68, col = CARD$muted, family = "mono")
+
+  invisible(list(image = image, palette = pal, px = item$px, frac = frac,
+                 mean_color = mean_hex))
+}
+
+
+## -----------------------------------------------------------------------------
+##  argiope_card_grid() — a page of cards
+##
+##  Each card is drawn by argiope_card() into one panel of an mfrow grid, so the
+##  two never diverge: change the card and the grid follows.
+##
+##  The card was designed at roughly 5.2 x 7.1 inches, so the page is sized from
+##  the number of columns and rows times that shape. Fitting a tall card into a
+##  wide panel is what makes a grid of them look wrong.
+## -----------------------------------------------------------------------------
+
+argiope_card_grid <- function(g, page = 1, per_page = 6, ncol = NULL, select = NULL,
+                              file = NULL, card_w = 3.5, card_h = 4.8, res = 150,
+                              maxdim = 600, gap = 0.35, page_bg = "#0B0D07") {
+  it <- .selected(g, select, include_empty = FALSE)
+  n <- nrow(it)
+  if (!n) { .explain_empty(g); return(invisible(NULL)) }
+
+  pages <- max(1L, as.integer(ceiling(n / per_page)))
+  page <- max(1L, min(as.integer(page), pages))
+  idx <- seq((page - 1) * per_page + 1, min(page * per_page, n))
+  it <- it[idx, , drop = FALSE]
+
+  if (is.null(ncol)) ncol <- max(1L, min(nrow(it), 3L))
+  nrow_ <- as.integer(ceiling(nrow(it) / ncol))
+
+  if (!is.null(file)) {
+    grDevices::png(file, width = ncol * card_w * res, height = nrow_ * card_h * res,
+                   res = res)
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
+  op <- graphics::par(mfrow = c(nrow_, ncol), bg = page_bg, oma = c(0, 0, 0, 0))
+  on.exit(graphics::par(op), add = TRUE)
+
+  for (i in seq_len(nrow(it))) {
+    argiope_card(g, it$image[i], maxdim = maxdim, mar = rep(gap, 4))
+  }
+  ## leave the unused panels as page background rather than half-drawn cards
+  for (i in seq_len(nrow_ * ncol - nrow(it))) graphics::plot.new()
+
+  message("Page ", page, " of ", pages, " · ", nrow(it), " of ", n, " cards")
+  invisible(page)
+}
+
+
 ## #############################################################################
 ##  SECTION 4 — RUN IT, ONE STEP AT A TIME
 ##
@@ -983,6 +1208,18 @@ res$cluster_sizes
 
 ## argiope_dashboard(g)                          # ... or pick one from a list
 ## argiope_dashboard(g, first, file = "card.png")  # ... or write it to a PNG
+
+
+## ---- STEP 7b · the specimen card, and a page of cards -----------------------
+## A denser alternative to the grid: one card per specimen, with the cut-out and the
+## palette listed by name. argiope_card_grid() lays several on a page, reusing
+## argiope_card() so the two never diverge.
+
+argiope_card(g, first)
+## argiope_card(g, first, file = "card.png")     # ... or to a PNG
+
+argiope_card_grid(g, page = 1, per_page = 6, ncol = 3)
+## argiope_card_grid(g, select = sel, file = "cards.png")
 
 
 ## ---- STEP 8 · export every page to one PDF ----------------------------------

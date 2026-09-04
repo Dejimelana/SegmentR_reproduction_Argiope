@@ -105,6 +105,18 @@ res$cluster_sizes
 ## argiope_dashboard(g, first, file = "specimen.png")    # ... or write a PNG
 
 
+## ---- STEP 7b · the specimen card, and a page of cards -----------------------
+## A denser alternative to the grid: one card per specimen, with the cut-out and the
+## palette listed by nearest colour name. argiope_card_grid() lays several on a page,
+## calling argiope_card() per panel so the two cannot diverge.
+
+argiope_card(g, first)
+## argiope_card(g, first, file = "card.png")        # ... or to a PNG
+
+argiope_card_grid(g, page = 1, per_page = 6, ncol = 3)
+## argiope_card_grid(g, select = sel, file = "cards.png")
+
+
 ## ---- STEP 8 · export every page to one PDF ----------------------------------
 ## Rasters go in uncompressed, so lower maxdim for a large gallery.
 
