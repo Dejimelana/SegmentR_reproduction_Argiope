@@ -81,7 +81,18 @@ for f in ("adapt_unet.py", "repro_segmentr.py", "argiope_unet.py"):
 shutil.copy2(SRC / "checkpoints" / "opistho_unet.pt",
              PKG / "inst" / "checkpoints" / "opistho_unet.pt")
 shutil.copytree(SRC / "sample_images", PKG / "inst" / "sample_images")
-print("inst/: python + checkpoint + sample_images")
+
+# the worked example ships INSIDE the package: installing the tarball alone, with no
+# hand-over folder around it, still gets you the walkthrough. It lives in two places,
+# so refuse to build on a drifted pair rather than pick one silently.
+example = Path(__file__).resolve().parent / "example_argiopeSegmentR.R"
+beside_tarball = SRC / "package" / "example_argiopeSegmentR.R"
+if beside_tarball.exists():
+    assert (example.read_text(encoding="utf-8")
+            == beside_tarball.read_text(encoding="utf-8")), (
+        f"{example} and {beside_tarball} have drifted apart")
+shutil.copy2(example, PKG / "inst" / "examples" / example.name)
+print("inst/: python + checkpoint + sample_images + examples/" + example.name)
 
 # ---------------------------------------------------------------- DESCRIPTION / NAMESPACE
 (PKG / "DESCRIPTION").write_text("""Package: argiopeSegmentR

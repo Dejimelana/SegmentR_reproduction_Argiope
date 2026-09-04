@@ -13,7 +13,8 @@ none.
 ## Three ways in
 
 **As an installed R package:** `package/argiopeSegmentR_0.1.0.tar.gz` installs with one line
-and carries everything, weights included. Work through `package/example_argiopeSegmentR.R`.
+and carries everything, weights included — the worked example among it, so the tarball
+alone is enough. Work through `package/example_argiopeSegmentR.R`.
 See `package/README.md`.
 
 **As a cheatsheet:** `cheatsheet_argiopeSegmentR.pdf` — two A4 pages with the usage, the
