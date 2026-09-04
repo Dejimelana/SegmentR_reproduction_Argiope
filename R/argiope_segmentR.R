@@ -110,6 +110,13 @@ argiope_gallery <- function(dir, out = NULL, run_id = "r-gallery", n = NULL, see
 
   run_dir <- file.path(out, run_id)
   done <- file.exists(file.path(run_dir, "summary.json"))
+  if (reuse && done) {
+    verdict <- .reusable(run_dir, dir, n)
+    if (!isTRUE(verdict$ok)) {
+      done <- FALSE
+      if (!quiet) message("Not reusing the cached run: ", verdict$why)
+    }
+  }
   if (!(reuse && done)) {
     args <- c(shQuote(normalizePath(adapter, winslash = "/")),
               "--images", shQuote(normalizePath(dir, winslash = "/")),
@@ -136,6 +143,37 @@ argiope_gallery <- function(dir, out = NULL, run_id = "r-gallery", n = NULL, see
     message("Reusing the existing run in ", run_dir)
   }
   argiope_load_gallery(run_dir)
+}
+
+#' Is a cached run still the answer to the question being asked?
+#'
+#' Reusing blindly is how a run made against a half-installed environment, or against a
+#' different folder, keeps being served long after the cause is fixed.
+.reusable <- function(run_dir, dir, n = NULL) {
+  cfg <- tryCatch(jsonlite::fromJSON(file.path(run_dir, "run_config.json")),
+                  error = function(e) NULL)
+  smry <- tryCatch(jsonlite::fromJSON(file.path(run_dir, "summary.json")),
+                   error = function(e) NULL)
+  if (is.null(cfg) || is.null(smry)) return(list(ok = FALSE, why = "it is unreadable"))
+
+  want <- normalizePath(dir, winslash = "/", mustWork = FALSE)
+  got <- normalizePath(as.character(cfg$images)[1], winslash = "/", mustWork = FALSE)
+  if (!identical(tolower(want), tolower(got))) {
+    return(list(ok = FALSE, why = paste0("it was made from a different folder (", got, ")")))
+  }
+  if (isTRUE(as.integer(smry$processed)[1] == 0L)) {
+    return(list(ok = FALSE, why = "it produced no masks at all, so it is not worth keeping"))
+  }
+  if (is.null(n)) {
+    # count the way adapt_unet.py does: .jpg/.jpeg/.png, recursively
+    n_now <- length(list.files(dir, pattern = "[.](jpe?g|png)$", recursive = TRUE,
+                               ignore.case = TRUE))
+    if (!is.null(smry$n_images) && n_now != as.integer(smry$n_images)[1]) {
+      return(list(ok = FALSE, why = sprintf("the folder now holds %d images, the run covered %d",
+                                            n_now, as.integer(smry$n_images)[1])))
+    }
+  }
+  list(ok = TRUE, why = "")
 }
 
 #' Load a finished run directory as a gallery object.
@@ -199,6 +237,13 @@ print.argiope_gallery <- function(x, ...) {
   if (any(it$has_mask)) {
     cat("  median score ", format(stats::median(it$score, na.rm = TRUE), digits = 3),
         " · pages of 6: ", argiope_pages(x), "\n", sep = "")
+  } else {
+    reasons <- it$reason[!is.na(it$reason) & nzchar(it$reason)]
+    if (length(reasons)) {
+      tb <- sort(table(reasons), decreasing = TRUE)
+      cat("  NOTHING SEGMENTED - most common reason: \"", names(tb)[1], "\" (",
+          tb[[1]], " of ", length(reasons), ")\n", sep = "")
+    }
   }
   invisible(x)
 }
@@ -350,10 +395,29 @@ argiope_pick <- function(g, only_with_mask = TRUE, preselect = NULL) {
   it[stats::complete.cases(it$image), , drop = FALSE]
 }
 
+#' A bare "nothing to plot" hides the cause; name it.
+.explain_empty <- function(g) {
+  reasons <- g$items$reason[!g$items$has_mask]
+  reasons <- reasons[!is.na(reasons) & nzchar(reasons)]
+  if (!length(reasons)) {
+    message("Nothing to plot: no image in this gallery has a mask.")
+    return(invisible(NULL))
+  }
+  tb <- sort(table(reasons), decreasing = TRUE)
+  message("Nothing to plot: every image was skipped. Most common reason: \"",
+          names(tb)[1], "\" (", tb[[1]], " of ", length(reasons), ").")
+  if (grepl("No module named", names(tb)[1])) {
+    message("  That is a Python environment problem, not a segmentation one. ",
+            "Run argiope_status() from setup.R, then delete the cached run and try again.")
+  }
+  invisible(NULL)
+}
+
 #' How many pages the gallery needs.
 argiope_pages <- function(g, per_page = 6, select = NULL, include_empty = FALSE) {
   n <- nrow(.selected(g, select, include_empty))
-  max(1L, as.integer(ceiling(n / per_page)))
+  if (!n) return(0L)          # saying "1" here contradicted argiope_plot's "Nothing to plot"
+  as.integer(ceiling(n / per_page))
 }
 
 #' Draw one page of the gallery as a grid.
@@ -366,7 +430,7 @@ argiope_plot <- function(g, page = 1, per_page = 6, select = NULL, include_empty
                          ncol = NULL, maxdim = 520) {
   it <- .selected(g, select, include_empty)
   n <- nrow(it)
-  if (!n) { message("Nothing to plot."); return(invisible(NULL)) }
+  if (!n) { .explain_empty(g); return(invisible(NULL)) }
   pages <- max(1L, as.integer(ceiling(n / per_page)))
   page <- max(1L, min(as.integer(page), pages))
   idx <- seq((page - 1) * per_page + 1, min(page * per_page, n))
