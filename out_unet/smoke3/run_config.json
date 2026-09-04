@@ -1,0 +1,43 @@
+{
+  "run_id": "smoke3",
+  "argiope_root": "C:\\Users\\Usuario\\Documents\\Research_Projects\\Argiope",
+  "images": "C:\\Users\\Usuario\\Documents\\Research_Projects\\Argiope\\data\\interim\\opistho_seg\\images",
+  "n": 3,
+  "seed": 42,
+  "source": "import",
+  "weights": "C:\\Users\\Usuario\\Documents\\Research_Projects\\Argiope\\checkpoints\\opistho_unet.pt",
+  "encoder": "resnet34",
+  "imgsz": 512,
+  "threshold": 0.5,
+  "device": "cuda",
+  "n_colors": 5,
+  "custom_colors": null,
+  "faithful_json": false,
+  "qa": true,
+  "label": "opisthosoma",
+  "started_utc": "2026-09-04T10:13:40.291749+00:00",
+  "versions": {
+    "python": "3.11.15",
+    "torch": "2.11.0+cu128",
+    "segmentation-models-pytorch": "0.5.0",
+    "numpy": "1.26.4",
+    "scikit-learn": "1.9.0",
+    "scikit-image": "0.26.0",
+    "opencv-python": "4.11.0.86",
+    "matplotlib": "3.11.1"
+  },
+  "image_list": [
+    {
+      "path": "C:\\Users\\Usuario\\Documents\\Research_Projects\\Argiope\\data\\interim\\opistho_seg\\images\\0a5795cff5ee.jpg",
+      "group": "images"
+    },
+    {
+      "path": "C:\\Users\\Usuario\\Documents\\Research_Projects\\Argiope\\data\\interim\\opistho_seg\\images\\0cb8b75b7c53.jpg",
+      "group": "images"
+    },
+    {
+      "path": "C:\\Users\\Usuario\\Documents\\Research_Projects\\Argiope\\data\\interim\\opistho_seg\\images\\3712a49aa7fa.jpg",
+      "group": "images"
+    }
+  ]
+}

@@ -41,6 +41,7 @@ The probe therefore expects to be run from the Argiope project root, or pointed 
 ├── repro_segmentr.py            the ported pipeline — the reproduction proper, unchanged
 ├── adapt_unet.py                the adapter: Argiope's trained U-Net -> stages E/F/G
 ├── R/argiope.R                  thin R interface over the `argiope describe` contract
+├── R/argiope_segmentR.R         paginated grid gallery in R, with list selection
 ├── docs/GALERIA.md              the gallery, rendered by GitHub: masks, cut-outs, palettes
 ├── docs/galeria.html            the interactive version of the same run
 ├── experiments/                 follow-up work that is NOT part of the reproduction
@@ -93,6 +94,31 @@ it. `--from-json` re-runs colour with the U-Net never loaded.
 python repro/segmentr/adapt_unet.py --images data/interim/opistho_seg/images --n 20
 python repro/segmentr/adapt_unet.py --from-json repro/segmentr/outputs/<run_id>
 ```
+
+**`R/argiope_segmentR.R` — the gallery, from R.** Point it at a directory of images and it
+runs the pipeline once (one model load, not one per image), then draws the results as a
+paginated grid: photograph with the mask outlined, and the palette stage E extracted. Items
+can be picked from a list first. Compositing and drawing happen in R; only the segmenter is
+Python. Requires `jsonlite`, `jpeg`, `png`.
+
+```r
+source("R/argiope_segmentR.R")
+options(argiope.python = ".../envs/argiope/python.exe")
+g <- argiope_gallery("data/raw/gbif/argiope_bruennichi", n = 40)
+g                                          # 40 images, 31 with a mask, pages of 6: 6
+argiope_plot(g, page = 2)                  # one page of the grid
+argiope_plot(g, select = argiope_pick(g))  # choose from a list, then plot
+argiope_plot(g, include_empty = TRUE)      # show the empty masks too, labelled
+argiope_pdf(g, "galeria.pdf")              # every page into one PDF
+```
+
+```bash
+Rscript R/argiope_segmentR.R <image_dir> [output.pdf] [n_images]
+```
+
+`argiope_pick()` opens a real multi-selection list in an interactive session and falls back
+to "everything" in a script. Rasters are embedded uncompressed in PDF, so lower `maxdim` for
+a large gallery, or render pages to PNG instead.
 
 **`R/argiope.R` — the R layer.** Wraps, never reimplements: the segmenter stays in torch and R
 calls the published CLI contract (`argiope describe --json --mask`) across a process boundary,

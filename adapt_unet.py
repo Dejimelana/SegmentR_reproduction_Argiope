@@ -392,7 +392,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument("--from-json", type=Path, default=None)
     p.add_argument("--no-qa", action="store_true")
     p.add_argument("--run-id", type=str, default=None)
-    p.add_argument("--out", type=str, default="repro/segmentr/outputs")
+    p.add_argument("--out", type=str, default="repro/segmentr/out_unet")
     return p.parse_args(argv)
 
 
