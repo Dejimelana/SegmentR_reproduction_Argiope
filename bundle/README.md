@@ -1,5 +1,4 @@
-<!-- Lives at the ROOT of a hand-over folder. This is NOT the repository's copy:
-     the repository ships docs/GALERIA.md and docs/img/, a hand-over folder does not. -->
+<!-- Lives at the ROOT of a hand-over folder. NOT the repository copy. -->
 
 # Argiope × SegmentR — opisthosoma masks and CIELAB palettes, from R
 
@@ -10,6 +9,16 @@ gallery and a four-panel dashboard per specimen.
 Everything needed is in this folder, including the trained model. The only thing that cannot
 be shipped is a Python interpreter — and `setup.R` will build one for you from R if you have
 none.
+
+## Three ways in
+
+**As an installed R package:** `package/argiopeSegmentR_0.1.0.tar.gz` installs with one line
+and carries everything, weights included. Work through `package/example_argiopeSegmentR.R`.
+See `package/README.md`.
+
+**As a cheatsheet:** `cheatsheet_argiopeSegmentR.html` — two printable pages with the usage,
+the plotting functions, the measured performance of every segmenter tried, and the three
+failure modes.
 
 ## Two ways in
 
@@ -77,7 +86,7 @@ g <- argiope_gallery("random_ArTaxOr+GBIF", out = "runs", run_id = "random")
 One argument changes:
 
 ```r
-source("R/argiope_segmentR.R")
+source("argiope_pipeline_segmentR.R")
 g <- argiope_gallery("C:/path/to/your/images", out = "runs", run_id = "mine")
 ```
 
@@ -105,8 +114,6 @@ reason, in `argiope_items(g)` and in `runs/<id>/skipped.csv`.
 |---|---|
 | `argiope_pipeline_segmentR.R` | **the whole workflow in one file — start here** |
 | `setup.R` | installs the R side and checks the Python side, without running anything |
-| `Argiope_SegmentR_R.ipynb` | the same thing as a Jupyter notebook (needs an R kernel) |
-| `R/argiope_segmentR.R` | all the R functions |
 | `adapt_unet.py`, `repro_segmentr.py`, `argiope_unet.py` | the Python side the R layer calls |
 | `checkpoints/opistho_unet.pt` | the trained U-Net, 130 MB |
 | `sample_images/` | 9 photographs, with `ATTRIBUTION.md` |
@@ -120,12 +127,6 @@ reason, in `argiope_items(g)` and in `runs/<id>/skipped.csv`.
 **Python** ≥ 3.9 with `torch`, `segmentation-models-pytorch`, `numpy`, `opencv-python`,
 `scikit-learn`, `scikit-image`, `scipy`, `matplotlib`, `pillow`. A GPU is optional: the model
 runs on CPU, just slower (a few seconds per image).
-
-For the notebook only, an R kernel for Jupyter:
-
-```r
-install.packages("IRkernel"); IRkernel::installspec(name = "ir", displayname = "R")
-```
 
 ## How it fits together
 
@@ -171,9 +172,6 @@ five, which is a known limit, not a bug in this code.
 - Measured against hand-drawn masks on a held-out split, the median IoU is 0.765, and the
   colour taken from the predicted mask is indistinguishable from the colour taken from the
   hand-drawn one (ΔE 1.51) wherever IoU ≥ 0.7.
-- `R/argiope_segmentR.R` is the same code split across functions, kept because the
-  notebook sources it. If you only use `argiope_pipeline_segmentR.R`, you can delete
-  the notebook and that file together.
 
 ## Credits and licence
 
