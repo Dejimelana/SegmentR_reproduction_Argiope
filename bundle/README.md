@@ -1,5 +1,5 @@
-<!-- These files live at the ROOT of a hand-over folder, beside adapt_unet.py,
-     repro_segmentr.py, argiope_unet.py, R/, checkpoints/ and the image folders. -->
+<!-- Lives at the ROOT of a hand-over folder. This is NOT the repository's copy:
+     the repository ships docs/GALERIA.md and docs/img/, a hand-over folder does not. -->
 
 # Argiope × SegmentR — opisthosoma masks and CIELAB palettes, from R
 
@@ -109,8 +109,8 @@ reason, in `argiope_items(g)` and in `runs/<id>/skipped.csv`.
 | `R/argiope_segmentR.R` | all the R functions |
 | `adapt_unet.py`, `repro_segmentr.py`, `argiope_unet.py` | the Python side the R layer calls |
 | `checkpoints/opistho_unet.pt` | the trained U-Net, 130 MB |
-| `sample_images/` | six photographs, with `ATTRIBUTION.md` |
-| `crops/` | 40 crops made for hand annotation — pre-cropped spiders, the easy case |
+| `sample_images/` | 9 photographs, with `ATTRIBUTION.md` |
+| `crops/` | 40 crops made for hand annotation, with `PROVENANCE.md` — the easy case |
 | `random_ArTaxOr+GBIF/` | 40 spiders drawn at random from ArTaxOr and GBIF, with `PROVENANCE.md` |
 
 ## Requirements
@@ -182,7 +182,8 @@ The colour, artefact and QA stages are a port of **SegmentR** — Boyko, J. D. (
 Argiope project. See `THIRD_PARTY_NOTICES.md`.
 
 The six sample photographs are third-party GBIF observations, reproduced with attribution
-under Creative Commons licences — see `sample_images/ATTRIBUTION.md`. Most are **CC-BY-NC**,
+under Creative Commons licences. Every image folder carries its own attribution file; the
+totals are in `THIRD_PARTY_NOTICES.md`. Most are **CC-BY-NC**,
 which forbids commercial use.
 
 Colours are reported as HEX, Lab coordinates and coverage. No PANTONE® compatibility is
