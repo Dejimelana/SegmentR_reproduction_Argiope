@@ -42,6 +42,7 @@ The probe therefore expects to be run from the Argiope project root, or pointed 
 ├── adapt_unet.py                the adapter: Argiope's trained U-Net -> stages E/F/G
 ├── R/argiope.R                  thin R interface over the `argiope describe` contract
 ├── R/argiope_segmentR.R         paginated grid gallery in R, with list selection
+├── R/argiope_pipeline_segmentR.R  the same workflow as ONE readable file
 ├── docs/GALERIA.md              the gallery, rendered by GitHub: masks, cut-outs, palettes
 ├── docs/galeria.html            the interactive version of the same run
 ├── experiments/                 follow-up work that is NOT part of the reproduction

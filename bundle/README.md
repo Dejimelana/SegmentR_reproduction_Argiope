@@ -1,6 +1,5 @@
-<!-- These three files live at the ROOT of a hand-over folder, beside adapt_unet.py,
-     repro_segmentr.py, argiope_unet.py, R/, checkpoints/ and sample_images/.
-     See the repository README for how that folder is assembled. -->
+<!-- These files live at the ROOT of a hand-over folder, beside adapt_unet.py,
+     repro_segmentr.py, argiope_unet.py, R/, checkpoints/ and sample_images/. -->
 
 # Argiope × SegmentR — opisthosoma masks and CIELAB palettes, from R
 
@@ -11,6 +10,16 @@ gallery and a four-panel dashboard per specimen.
 Everything needed is in this folder, including the trained model. The only thing that cannot
 be shipped is a Python interpreter — and `setup.R` will build one for you from R if you have
 none.
+
+## Two ways in
+
+**Reading the code:** `argiope_pipeline_segmentR.R` is the whole thing in one file, in
+reading order — auxiliary functions, then configuration, then the pipeline in seven numbered
+steps. Sourcing it runs everything; set `CFG$autorun <- FALSE` in its configuration section
+to load the functions without running. Start here if you want to understand what happens.
+
+**Using it:** `setup.R` then `run_demo.R`, which split the same code across files. Identical
+behaviour — verified on the same folder: same masks, same palettes, same counts.
 
 ## Quick start
 
