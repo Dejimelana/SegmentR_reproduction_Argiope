@@ -129,11 +129,14 @@ class UnetImportSource:
     def __init__(self, weights: Path, encoder: str, imgsz: int, threshold: float, device: str):
         self.cfg = {
             "unet_weights": str(weights),
-            "unet_encoder": encoder,
             "unet_imgsz": imgsz,
             "unet_threshold": threshold,
             "device": device,
         }
+        # omitted when unset so UnetSegmenter's own default applies and the checkpoint's
+        # recorded encoder wins; passing a wrong name here would be silently overridden
+        if encoder:
+            self.cfg["unet_encoder"] = encoder
         self._seg = None
 
     def load(self):
@@ -382,7 +385,10 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument("--source", choices=("import", "cli"), default="import",
                    help="in-process UnetSegmenter, or the `argiope describe` CLI contract")
     p.add_argument("--weights", type=str, default="checkpoints/opistho_unet.pt")
-    p.add_argument("--encoder", type=str, default="resnet34")
+    p.add_argument("--encoder", type=str, default=None,
+                   help="only consulted if the checkpoint does not record its own encoder; "
+                        "UnetSegmenter.load() reads the real one (resnet50 in the current "
+                        "checkpoint), so leaving this unset is correct")
     p.add_argument("--imgsz", type=int, default=512)
     p.add_argument("--threshold", type=float, default=0.5)
     p.add_argument("--device", type=str, default="cuda")

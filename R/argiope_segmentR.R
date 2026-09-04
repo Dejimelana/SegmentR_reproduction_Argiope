@@ -17,6 +17,8 @@
 ##   argiope_plot(g, page = 1)                 # first page of the grid
 ##   argiope_plot(g, select = argiope_pick(g)) # choose items from a list, then plot
 ##   argiope_pdf(g, "galeria.pdf")             # every page into one PDF
+##   argiope_dashboard(g)                      # pick one image -> 4-panel dashboard
+##   argiope_dashboard(g, "0cb8b75b7c53.jpg", file = "ficha.png")
 ##
 ## Non-interactive:  Rscript R/argiope_segmentR.R <dir_de_imagenes> [salida.pdf] [n]
 
@@ -30,22 +32,25 @@
   }
 }
 
-.script_path <- function() {
+# Resolved WHEN THIS FILE IS LOADED, not when a function is later called: the source()
+# frame that carries $ofile is gone by then, and the --file= fallback would point at
+# whichever outer script did the sourcing.
+.ARGIOPE_SCRIPT <- local({
   for (i in seq_len(sys.nframe())) {                 # source()d
     ofile <- sys.frame(i)$ofile
     if (!is.null(ofile)) return(normalizePath(ofile, winslash = "/", mustWork = FALSE))
   }
-  ca <- commandArgs(trailingOnly = FALSE)            # Rscript --file=
+  ca <- commandArgs(trailingOnly = FALSE)            # Rscript argiope_segmentR.R
   m <- grep("^--file=", ca, value = TRUE)
   if (length(m)) {
     return(normalizePath(sub("^--file=", "", m[1]), winslash = "/", mustWork = FALSE))
   }
   NA_character_
-}
+})
 
 .repo_root <- function() {
   # .../repro/segmentr/R/argiope_segmentR.R -> .../repro/segmentr
-  this <- .script_path()
+  this <- .ARGIOPE_SCRIPT
   if (is.na(this) || !nzchar(this)) return(normalizePath(".", winslash = "/"))
   dirname(dirname(this))
 }
@@ -377,6 +382,169 @@ argiope_pdf <- function(g, file = "argiope_galeria.pdf", per_page = 6, select = 
   }
   message("Wrote ", pages, " page(s) -> ", normalizePath(file, winslash = "/", mustWork = FALSE))
   invisible(file)
+}
+
+
+# ================================================================ single-image dashboard
+# The four-panel QA figure, rebuilt in R from the run's artefacts: the photograph with the
+# detection box and mask contour, the dominant colours, the RGB histogram of the masked
+# pixels, and the mask recoloured by cluster centroid.
+#
+# The recolouring reproduces stage E's assignment rule rather than approximating it: masked
+# pixels are converted to CIELAB with grDevices::convertColor (base R, the same call the
+# original SegmentR used) and assigned to the nearest centroid by Euclidean distance in Lab.
+
+#' The detection stored beside the mask, as a one-row list (label, score, box).
+.read_detection <- function(g, item) {
+  stem <- tools::file_path_sans_ext(item$image)
+  jp <- file.path(g$run_dir, "json", paste0(item$group, "__", stem, ".json"))
+  if (!file.exists(jp)) return(NULL)
+  recs <- jsonlite::fromJSON(jp, simplifyVector = FALSE)
+  if (!length(recs)) return(NULL)
+  d <- recs[[1]]
+  list(label = d$label, score = d$score, box = unlist(d$box)[c("xmin", "ymin", "xmax", "ymax")])
+}
+
+#' Assign each masked pixel to its nearest palette centroid, in Lab.
+.assign_clusters <- function(rgb_px, centers_lab) {
+  lab <- grDevices::convertColor(rgb_px, from = "sRGB", to = "Lab")
+  d2 <- vapply(seq_len(nrow(centers_lab)),
+               function(i) colSums((t(lab) - centers_lab[i, ])^2),
+               numeric(nrow(lab)))
+  if (is.null(dim(d2))) d2 <- matrix(d2, nrow = nrow(lab))
+  max.col(-d2, ties.method = "first")
+}
+
+#' Pick exactly one image from a list.
+argiope_pick_one <- function(g, only_with_mask = TRUE) {
+  it <- g$items
+  if (only_with_mask) it <- it[it$has_mask, ]
+  if (!nrow(it)) return(NA_character_)
+  labels <- sprintf("%s  [%s]%s", it$image, it$group,
+                    ifelse(is.na(it$score), "", sprintf("  score %.3f", it$score)))
+  if (!interactive()) return(it$image[1])
+  chosen <- utils::select.list(labels, multiple = FALSE, graphics = TRUE,
+                               title = "Select one image")
+  if (!nzchar(chosen)) return(NA_character_)
+  it$image[match(chosen, labels)]
+}
+
+#' Four-panel dashboard for one image.
+#'
+#' @param g A gallery from [argiope_gallery()] or [argiope_load_gallery()].
+#' @param image Image file name. Omit to choose from a list.
+#' @param file Optional PNG path; when given the figure is written there instead of the
+#'   current device.
+#' @param maxdim Longest side used for the displayed rasters. Statistics (histogram,
+#'   cluster sizes) are always computed at full resolution.
+#' @return Invisibly, a list with the palette, the mask pixel count and the mean/median
+#'   colours — so the panel's numbers are available to the caller, not just drawn.
+argiope_dashboard <- function(g, image = NULL, file = NULL, maxdim = 700,
+                              width = 1500, height = 1000, res = 130) {
+  .need("jsonlite")
+  if (is.null(image)) image <- argiope_pick_one(g)
+  if (is.na(image) || !nzchar(image)) { message("No image selected."); return(invisible(NULL)) }
+  it <- g$items[g$items$image == image, , drop = FALSE]
+  if (!nrow(it)) stop("no such image in this gallery: ", image, call. = FALSE)
+  item <- it[1, ]
+  if (!isTRUE(item$has_mask)) {
+    stop("this image has no mask (", if (is.na(item$reason)) "empty" else item$reason,
+         "), so there is nothing to describe", call. = FALSE)
+  }
+
+  rgb_full <- .read_image(item$path)
+  if (length(dim(rgb_full)) == 2L) rgb_full <- array(rgb_full, c(dim(rgb_full), 3))
+  rgb_full <- rgb_full[, , 1:3, drop = FALSE]
+  mask_full <- .as_gray(.read_image(item$mask)) > 0.5
+  if (!all(dim(mask_full) == dim(rgb_full)[1:2])) {
+    stop("mask and image dimensions disagree for ", image, call. = FALSE)
+  }
+
+  pal <- argiope_palette_of(g, image)
+  centers_lab <- as.matrix(pal[, c("lab_l", "lab_a", "lab_b")])
+  centers_rgb <- pmin(pmax(grDevices::convertColor(centers_lab, from = "Lab", to = "sRGB"), 0), 1)
+
+  px <- cbind(rgb_full[, , 1][mask_full], rgb_full[, , 2][mask_full], rgb_full[, , 3][mask_full])
+  n_px <- nrow(px)
+  frac <- n_px / prod(dim(mask_full))
+  assign_ <- .assign_clusters(px, centers_lab)
+
+  det <- .read_detection(g, item)
+  row0 <- g$colors[g$colors$image == image, ][1, ]
+  mean_hex <- row0$mean_color
+  median_hex <- row0$median_color
+
+  if (!is.null(file)) {
+    grDevices::png(file, width = width, height = height, res = res)
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
+  op <- graphics::par(mfrow = c(2, 2), mar = c(3.2, 3.2, 2.4, 1.0),
+                      oma = c(0.4, 0.4, 2.2, 0.4), bg = "#FFFFFF")
+  on.exit(graphics::par(op), add = TRUE)
+
+  # ---- panel 1: photograph, detection box, mask contour -------------------------
+  k <- .decimate_k(dim(rgb_full)[1:2], maxdim)
+  disp <- .decimate(rgb_full, k)
+  dmask <- .decimate(mask_full, k)
+  edge <- .dilate(dmask, 2L) & !dmask
+  for (ch in 1:3) { v <- disp[, , ch]; v[edge] <- .ARGIOPE_ACCENT[ch]; disp[, , ch] <- v }
+  h <- dim(disp)[1]; w <- dim(disp)[2]
+  graphics::plot.new(); graphics::plot.window(c(0, w), c(h, 0), asp = 1)
+  graphics::rasterImage(disp, 0, h, w, 0, interpolate = TRUE)
+  if (!is.null(det)) {
+    b <- det$box / k
+    graphics::rect(b[["xmin"]], b[["ymin"]], b[["xmax"]], b[["ymax"]],
+                   border = "#3B4CC0", lwd = 1.6)
+    graphics::text(b[["xmin"]], b[["ymin"]] - 4,
+                   sprintf("%s: %.2f", det$label, det$score),
+                   adj = c(0, 1), cex = 0.62, col = "#3B4CC0")
+  }
+  graphics::title("detections + mask contours", cex.main = 0.95, font.main = 1, line = 0.6)
+
+  # ---- panel 2: dominant colours ------------------------------------------------
+  graphics::plot.new(); graphics::plot.window(c(0, nrow(pal)), c(-0.42, 1))
+  for (i in seq_len(nrow(pal))) {
+    graphics::rect(i - 1, 0, i, 1, col = pal$hex[i], border = NA)
+    graphics::text(i - 0.5, -0.05,
+                   sprintf("%s\n%.1f%%\nL%.0f a%.0f b%.0f", pal$hex[i], 100 * pal$coverage[i],
+                           pal$lab_l[i], pal$lab_a[i], pal$lab_b[i]),
+                   adj = c(0.5, 1), cex = 0.6, family = "mono", col = .ARGIOPE_INK)
+  }
+  graphics::title(sprintf("dominant colours (k-means in CIELAB)   mean %s  median %s",
+                          mean_hex, median_hex), cex.main = 0.85, font.main = 1, line = 0.6)
+
+  # ---- panel 3: RGB histogram of the masked pixels ------------------------------
+  brk <- seq(0, 255, length.out = 65)
+  hs <- lapply(1:3, function(ch) graphics::hist(px[, ch] * 255, breaks = brk, plot = FALSE))
+  ymax <- max(vapply(hs, function(x) max(x$counts), numeric(1)))
+  graphics::plot.new(); graphics::plot.window(c(0, 255), c(0, ymax * 1.04))
+  for (ch in 1:3) {
+    graphics::lines(c(0, rep(hs[[ch]]$breaks[-1], each = 2)),
+                    c(0, rep(hs[[ch]]$counts, each = 2), 0)[seq_len(2 * length(brk) - 1)],
+                    type = "s", col = c("red", "green3", "blue")[ch], lwd = 1)
+  }
+  graphics::axis(1, cex.axis = 0.75); graphics::axis(2, cex.axis = 0.75, las = 1)
+  graphics::box(col = "#333333")
+  graphics::title(sprintf("RGB histogram of masked pixels (n=%d)", n_px),
+                  cex.main = 0.95, font.main = 1, line = 0.6)
+  graphics::mtext("channel value", side = 1, line = 2, cex = 0.7)
+
+  # ---- panel 4: mask recoloured by cluster centroid -----------------------------
+  rec <- array(1, dim(rgb_full))
+  for (ch in 1:3) { v <- rec[, , ch]; v[mask_full] <- centers_rgb[assign_, ch]; rec[, , ch] <- v }
+  rec <- .decimate(rec, k)
+  graphics::plot.new(); graphics::plot.window(c(0, w), c(h, 0), asp = 1)
+  graphics::rasterImage(rec, 0, h, w, 0, interpolate = FALSE)
+  graphics::title("mask recoloured by cluster centroid", cex.main = 0.95, font.main = 1,
+                  line = 0.6)
+
+  graphics::mtext(sprintf("%s / %s    unet:%s    mask=%.2f%% of frame",
+                          item$group, item$image, basename(g$config$weights), 100 * frac),
+                  side = 3, outer = TRUE, line = 0.4, cex = 0.85, col = .ARGIOPE_INK)
+
+  invisible(list(image = image, palette = pal, mask_px = n_px, mask_frac = frac,
+                 mean_color = mean_hex, median_color = median_hex,
+                 cluster_sizes = tabulate(assign_, nbins = nrow(pal))))
 }
 
 # ---------------------------------------------------------------- script entry point
