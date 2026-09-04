@@ -16,6 +16,10 @@
 
 library(argiopeSegmentR)
 
+## Just re-installed the package? Restart R before this line. A session keeps the
+## version it already loaded and library() will not replace it, which surfaces later
+## as "could not find function".
+
 
 ## ---- STEP 0 · is the machine ready? -----------------------------------------
 ## The segmenter is a U-Net that runs in Python; the package ships the weights but

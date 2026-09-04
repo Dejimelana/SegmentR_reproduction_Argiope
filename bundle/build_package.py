@@ -23,7 +23,12 @@ if PKG.parent.exists():
 
 # ---------------------------------------------------------------- the R code
 text = (SRC / "argiope_pipeline_segmentR.R").read_text(encoding="utf-8")
-body = text[:text.index("##  SECTION 4") - 4]
+# anchored to a line start: the file's own header quotes "##  SECTION 4" inside the
+# snippet that tells a reader how to load sections 1-3, and an unanchored search
+# finds THAT first and cuts the package down to nothing.
+body = text[:text.index("\n##  SECTION 4") + 1 - 4]
+assert body.count("\n##  SECTION ") == 3, "expected sections 1-3, got " + str(
+    body.count("\n##  SECTION "))
 
 # drop the file-header block: a package has DESCRIPTION for that
 body = body[body.index("## #####"):]

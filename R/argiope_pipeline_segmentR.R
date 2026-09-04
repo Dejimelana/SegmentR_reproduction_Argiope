@@ -23,14 +23,26 @@
 ##
 ##  HOW TO RUN
 ##  ----------
-##  Sections 1-3 only DEFINE functions and settings. Section 4 is the walkthrough
-##  and it is the only part that runs anything.
+##  Sections 1-3 only DEFINE functions and settings; section 4 is the walkthrough
+##  and the only part that runs anything. So there are two moves, in this order:
 ##
-##      step by step   open this file, put the cursor on a line or select a block,
-##                     Ctrl+Enter. Every step prints something worth looking at
-##                     before you move on. This is the intended way.
+##      1. LOAD THE DEFINITIONS -- once per session, and AGAIN whenever this file
+##         changes. Select from the top of the file down to the section 4 banner
+##         and press Ctrl+Enter, or paste this, which finds the banner for you:
 ##
-##      all at once    source("argiope_pipeline_segmentR.R")
+##             .L <- readLines("argiope_pipeline_segmentR.R", encoding = "UTF-8")
+##             eval(parse(text = .L[1:(grep("^##  SECTION 4", .L)[1] - 1)]))
+##
+##      2. WALK THROUGH SECTION 4 -- put the cursor on a line (or select a block)
+##         and press Ctrl+Enter. Every step prints something worth looking at
+##         before you move on. This is the intended way.
+##
+##      all at once    source("argiope_pipeline_segmentR.R") does both.
+##
+##  An R session keeps the definitions it already has. If you edit or replace this
+##  file without redoing step 1, you keep running the old ones -- which is what
+##  "could not find function argiope_card" means: the file has it, the session
+##  does not. Section 4 checks for this and says so.
 ##
 ##  Settings live in one place, section 2 (CFG). Change them there.
 ##
@@ -1120,6 +1132,17 @@ argiope_card_grid <- function(g, page = 1, per_page = 6, ncol = NULL, select = N
 ##  Steps 1 and 2 are the only ones you must run in order. After that, 4 to 8 are
 ##  independent: re-run any of them as often as you like, they only read `g`.
 ## #############################################################################
+
+
+## The definitions have to be in this session before anything below runs, and they
+## have to be the CURRENT ones. An R session keeps whatever it was given, so an
+## edited file is not a reloaded file -- see HOW TO RUN at the top.
+
+if (!all(vapply(c("argiope_gallery", "argiope_plot", "argiope_card"),
+                exists, logical(1))))
+  stop("sections 1-3 of this file are not loaded in this session, or are an ",
+       "older copy of it. Load them first: see HOW TO RUN at the top of the file.",
+       call. = FALSE)
 
 
 ## ---- STEP 0 · is the machine ready? -----------------------------------------

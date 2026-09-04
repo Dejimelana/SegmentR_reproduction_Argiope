@@ -25,10 +25,11 @@ same two pages.
 
 **Reading the code, and stepping through it:** `argiope_pipeline_segmentR.R` is the whole
 thing in one file, in reading order — auxiliary functions, then configuration, then the
-functions themselves, then a walkthrough. Sections 1-3 only *define* things; section 4 is a
-numbered walkthrough you run **one step at a time** (put the cursor on a line, Ctrl+Enter),
-each printing something to look at before you move on. Sourcing the file runs the whole
-walkthrough instead. Start here if you want to understand what happens.
+functions themselves, then a walkthrough. Two moves, in that order: **load sections 1-3**
+(select from the top of the file down to the section 4 banner, Ctrl+Enter — they only
+*define* things), then walk through **section 4** one step at a time (cursor on a line,
+Ctrl+Enter), each step printing something to look at before you move on. Sourcing the file
+does both. Start here if you want to understand what happens.
 
 **Checking the machine first:** `setup.R` installs the R packages and reports whether the
 Python side is ready, without running anything. Sourcing the pipeline file runs the
@@ -47,7 +48,8 @@ source("setup.R")     # installs 3 R packages, then tells you what is still miss
 source("argiope_pipeline_segmentR.R")   # runs the walkthrough end to end
 ```
 
-Or open that file and run section 4 one step at a time, which is the intended way.
+Or open that file, load sections 1-3 first (select from the top down to the section 4
+banner, Ctrl+Enter), then run section 4 one step at a time, which is the intended way.
 
 If it says the Python side is missing, either point the bundle at a Python you already have:
 
@@ -152,6 +154,19 @@ python adapt_unet.py --from-json runs/demo
 
 **`Could not find the argiope environment's Python`** — run `source("setup.R")` and then either
 `argiope_use_python(...)` or `argiope_install_python()`.
+
+**`could not find function "argiope_card"`** (or any other `argiope_*`) — sections 1-3 are
+not loaded in this R session, or the session is holding an older copy of them. R keeps the
+definitions it was given, so editing or replacing the file changes nothing until you load it
+again:
+
+```r
+.L <- readLines("argiope_pipeline_segmentR.R", encoding = "UTF-8")
+eval(parse(text = .L[1:(grep("^##  SECTION 4", .L)[1] - 1)]))
+```
+
+Working from the installed package instead, the same situation needs a **restarted** R
+session: `library()` does not replace a namespace that is already loaded.
 
 **`missing checkpoint`** — `checkpoints/opistho_unet.pt` is not where it should be. It ships
 with this folder; if your copy is missing it, ask for it (130 MB, too large for email).
