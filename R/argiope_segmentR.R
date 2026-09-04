@@ -65,6 +65,12 @@ argiope_python <- function(python = NULL) {
   if (!is.null(opt) && nzchar(opt)) return(opt)
   env <- Sys.getenv("ARGIOPE_PYTHON", unset = "")
   if (nzchar(env)) return(env)
+  # a self-contained bundle records its interpreter here, so setup only happens once
+  cfg <- file.path(.repo_root(), "python_path.txt")
+  if (file.exists(cfg)) {
+    recorded <- trimws(readLines(cfg, warn = FALSE))[1]
+    if (length(recorded) && nzchar(recorded) && file.exists(recorded)) return(recorded)
+  }
   exe <- getOption("argiope.executable", default = unname(Sys.which("argiope")))
   if (!is.null(exe) && nzchar(exe)) {
     cand <- file.path(dirname(dirname(exe)), "python.exe")          # env/Scripts/.. -> env
@@ -91,7 +97,7 @@ argiope_python <- function(python = NULL) {
 #' @return A gallery object; see [argiope_items()].
 argiope_gallery <- function(dir, out = NULL, run_id = "r-gallery", n = NULL, seed = 42,
                             n_colors = 5, python = NULL, adapter = NULL, reuse = TRUE,
-                            quiet = FALSE) {
+                            quiet = FALSE, weights = NULL, device = NULL) {
   .need("jsonlite")
   if (!dir.exists(dir) && !file.exists(dir)) stop("no such directory: ", dir, call. = FALSE)
   if (is.null(out)) out <- file.path(tempdir(), "argiope_gallery")
@@ -110,6 +116,16 @@ argiope_gallery <- function(dir, out = NULL, run_id = "r-gallery", n = NULL, see
               "--out", shQuote(out), "--run-id", shQuote(run_id),
               "--n-colors", n_colors, "--seed", seed, "--no-qa")
     if (!is.null(n)) args <- c(args, "--n", n)
+    # a self-contained bundle keeps the weights beside the scripts; the repository does not,
+    # and there adapt_unet.py resolves them against the Argiope project root instead
+    if (is.null(weights)) {
+      local_ckpt <- file.path(.repo_root(), "checkpoints", "opistho_unet.pt")
+      if (file.exists(local_ckpt)) weights <- local_ckpt
+    }
+    if (!is.null(weights)) {
+      args <- c(args, "--weights", shQuote(normalizePath(weights, winslash = "/")))
+    }
+    if (!is.null(device)) args <- c(args, "--device", device)
     if (!quiet) message("Running the pipeline over ", dir, " (one model load) ...")
     st <- system2(argiope_python(python), args,
                   stdout = if (quiet) FALSE else "", stderr = if (quiet) FALSE else "")

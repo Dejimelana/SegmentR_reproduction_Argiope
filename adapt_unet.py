@@ -141,7 +141,12 @@ class UnetImportSource:
 
     def load(self):
         if self._seg is None:
-            from argiope.segmentation.unet_backend import UnetSegmenter
+            try:
+                from argiope.segmentation.unet_backend import UnetSegmenter
+            except ImportError:
+                # standalone bundle: a vendored copy sits next to this script, so the
+                # adapter runs without the argiope package installed
+                from argiope_unet import UnetSegmenter
 
             log(f"  loading UnetSegmenter from {self.cfg['unet_weights']} on {self.cfg['device']}")
             self._seg = UnetSegmenter(self.cfg).load()
@@ -391,7 +396,8 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         "checkpoint), so leaving this unset is correct")
     p.add_argument("--imgsz", type=int, default=512)
     p.add_argument("--threshold", type=float, default=0.5)
-    p.add_argument("--device", type=str, default="cuda")
+    p.add_argument("--device", type=str, default=None,
+                   help="cuda or cpu; auto-detected when unset")
     p.add_argument("--n-colors", type=int, default=5)
     p.add_argument("--custom-colors", type=str, default=None)
     p.add_argument("--faithful-json", action="store_true")
@@ -422,12 +428,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if not weights.is_absolute():
         weights = root / weights
 
+    device = args.device
+    if device is None:                       # a recipient may have no GPU at all
+        import torch
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
     if args.source == "import":
         if not weights.exists():
             log(f"missing checkpoint: {weights}")
             log("regenerate with: conda activate argiope && argiope train-segmenter")
             return 1
-        source = UnetImportSource(weights, args.encoder, args.imgsz, args.threshold, args.device)
+        source = UnetImportSource(weights, args.encoder, args.imgsz, args.threshold, device)
     else:
         source = CliSource()
 
@@ -440,7 +452,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     cfg = AdapterConfig(
         run_id=run_id, argiope_root=str(root), images=str(images_root), n=args.n, seed=args.seed,
         source=args.source, weights=str(weights), encoder=args.encoder, imgsz=args.imgsz,
-        threshold=args.threshold, device=args.device, n_colors=args.n_colors,
+        threshold=args.threshold, device=device, n_colors=args.n_colors,
         custom_colors=resolve_custom_colors(args.custom_colors),
         faithful_json=args.faithful_json, qa=not args.no_qa,
         started_utc=datetime.now(timezone.utc).isoformat(), versions=package_versions(),
